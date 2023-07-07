@@ -1,3 +1,4 @@
+import math
 from typing import List
 
 import matplotlib.pyplot as plt
@@ -53,15 +54,15 @@ def plot_distribution(freq_arr: List[float], mass_x_arr: List[float], mass_y_arr
     fig = plt.figure(figsize=(4, 2.4), tight_layout=True)
     ax = plt.axes()
     ax.stem(
-        freq_arr, mass_x_arr, 
+        freq_arr, mass_x_arr,
         basefmt='tab:orange', linefmt='tab:orange', label='mass_x'
     )
     ax.stem(
-        freq_arr, mass_y_arr, 
+        freq_arr, mass_y_arr,
         basefmt='tab:blue', linefmt='tab:blue', label='mass_y'
     )
     ax.stem(
-        freq_arr, mass_z_arr, 
+        freq_arr, mass_z_arr,
         basefmt='tab:green', linefmt='tab:green', label='mass_z'
     )
     ax.set_xlabel('frequency, Hz')
@@ -71,10 +72,18 @@ def plot_distribution(freq_arr: List[float], mass_x_arr: List[float], mass_y_arr
     plt.show()
 
 
+def create_freq2_arr(f1: float, f2: float, nf: int) -> List[float]:
+    d = math.log(f2 / f1) / nf
+    arr = [f1 * math.exp(itr * d) for itr in range(nf)]
+    arr.append(f2)
+    return arr
+
+
 def main():
     mode_arr, freq_arr, mass_x_arr, mass_y_arr, mass_z_arr = \
         fetch_modal_mass(OUT_PATH)
     plot_distribution(freq_arr, mass_x_arr, mass_y_arr, mass_z_arr)
+    freq2_arr = create_freq2_arr(1, 150, 6)
 
 
 if __name__ == '__main__':
