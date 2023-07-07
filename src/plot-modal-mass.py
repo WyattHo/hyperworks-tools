@@ -1,6 +1,6 @@
 from typing import List
 
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 
 
 OUT_PATH = 'D:/my-analysis/type-m-subassy/test/type-m-subassy-frf.out'
@@ -21,13 +21,13 @@ def tick_line_range(lines: List[str]) -> List[int]:
     return tick_ini, tick_end
 
 
-def fetch_values_in_line(line: str):
+def fetch_values_in_line(line: str) -> List[float]:
     vals = list(map(eval, line.split()))
     mode, freq, mass_x, mass_y, mass_z = vals[:5]
     return mode, freq, mass_x, mass_y, mass_z
 
 
-def iter_lines(lines: List[str]):
+def iter_lines(lines: List[str]) -> List[List[float]]:
     mode_arr, freq_arr, mass_x_arr, mass_y_arr, mass_z_arr = \
         [], [], [], [], []
     for line in lines:
@@ -49,9 +49,32 @@ def fetch_modal_mass(out_path: str):
     return iter_lines(valid_lines)
 
 
+def plot_distribution(freq_arr: List[float], mass_x_arr: List[float], mass_y_arr: List[float], mass_z_arr: List[float]):
+    fig = plt.figure(figsize=(4, 2.4), tight_layout=True)
+    ax = plt.axes()
+    ax.stem(
+        freq_arr, mass_x_arr, 
+        basefmt='tab:orange', linefmt='tab:orange', label='mass_x'
+    )
+    ax.stem(
+        freq_arr, mass_y_arr, 
+        basefmt='tab:blue', linefmt='tab:blue', label='mass_y'
+    )
+    ax.stem(
+        freq_arr, mass_z_arr, 
+        basefmt='tab:green', linefmt='tab:green', label='mass_z'
+    )
+    ax.set_xlabel('frequency, Hz')
+    ax.set_ylabel('mass fraction')
+    ax.set_title('Modal Mass Distribution')
+    ax.legend()
+    plt.show()
+
+
 def main():
     mode_arr, freq_arr, mass_x_arr, mass_y_arr, mass_z_arr = \
         fetch_modal_mass(OUT_PATH)
+    plot_distribution(freq_arr, mass_x_arr, mass_y_arr, mass_z_arr)
 
 
 if __name__ == '__main__':
