@@ -75,14 +75,14 @@ def plot_mass_distribution(freq_arr: List[float], mass_x_arr: List[float], mass_
     plt.show()
 
 
-def create_freq2_arr(f1: float, f2: float, nf: int) -> List[float]:
+def create_freqs_type2(f1: float, f2: float, nf: int) -> List[float]:
     d = math.log(f2 / f1) / nf
-    arr = [round(f1 * math.exp(itr * d), 3) for itr in range(nf)]
-    arr.append(f2)
-    return arr
+    freqs = [round(f1 * math.exp(itr * d), 3) for itr in range(nf)]
+    freqs.append(f2)
+    return freqs
 
 
-def sign(val: float):
+def sign(val: float) -> int:
     if val > 0:
         return 1
     elif val < 0:
@@ -92,16 +92,16 @@ def sign(val: float):
 
 
 def get_subrange(freq_ini: float, freq_end: float, nef: int, cluster: float):
-    fk_arr = []
+    freqs = []
     for k in range(nef):
         zeta = -1 + 2 * k / (nef - 1)
         fk = 0.5 * (freq_ini + freq_end) \
             + 0.5 * (freq_end - freq_ini) * abs(zeta)**(1/cluster) * sign(zeta)
-        fk_arr.append(round(fk, 3))
-    return fk_arr
+        freqs.append(round(fk, 3))
+    return freqs
 
 
-def create_freq3_arr(modal_f_arr: List[float], f1: float, f2: float, nef: int, cluster: float) -> List[float]:
+def create_freqs_type3(modal_f_arr: List[float], f1: float, f2: float, nef: int, cluster: float) -> List[float]:
     trimmed_arr = modal_f_arr.copy()
     for val in modal_f_arr:
         if (val <= f1) or (val >= f2):
@@ -123,13 +123,17 @@ def create_freq3_arr(modal_f_arr: List[float], f1: float, f2: float, nef: int, c
     return freq3_arr
 
 
-def plot_freqs(freqs_modal, freqs_excite):
+def plot_modal_and_excitation_frequencies(freqs_modal, freqs_excite):
     fig = plt.figure(figsize=(8, 1.6), tight_layout=True)
     ax = plt.axes()
-    ax.vlines(x=freqs_modal, ymin=0.0, ymax=1.0, label='modal',
-              colors='tab:orange', linewidth=0.8)
-    ax.vlines(x=freqs_excite, ymin=-1.0, ymax=0.0,
-              label='excitation', colors='tab:green', linewidth=0.8)
+    ax.vlines(
+        x=freqs_modal, ymin=0.0, ymax=1.0, label='modal',
+        colors='tab:orange', linewidth=0.8
+    )
+    ax.vlines(
+        x=freqs_excite, ymin=-1.0, ymax=0.0, label='excitation', 
+        colors='tab:green', linewidth=0.8
+    )
     ax.set_ybound(lower=-1.0, upper=1.0)
     ax.set_xlim([0, 700])
     ax.set_xlabel('frequency, Hz')
@@ -142,14 +146,16 @@ def plot_freqs(freqs_modal, freqs_excite):
 def get_excitation_frequency(freqs_modal: List[float]):
     F1_TYPE2, F2_TYPE2, NF_TYPE2 = 1, 150, 6
     F1_TYPE3, F2_TYPE3, NEF_TYPE3, CLUSTER_TYPE3 = 150, 600, 5, 2.0
-    freqs_type_2 = create_freq2_arr(F1_TYPE2, F2_TYPE2, NF_TYPE2)
-    freqs_type_3 = create_freq3_arr(
+    freqs_type_2 = create_freqs_type2(
+        F1_TYPE2, F2_TYPE2, NF_TYPE2
+    )
+    freqs_type_3 = create_freqs_type3(
         freqs_modal, F1_TYPE3, F2_TYPE3,
         NEF_TYPE3, CLUSTER_TYPE3
     )
-    freqs_all = list(set(freqs_type_2 + freqs_type_3))
-    freqs_all.sort()
-    return freqs_all
+    freqs_excite = list(set(freqs_type_2 + freqs_type_3))
+    freqs_excite.sort()
+    return freqs_excite
 
 
 def main():
@@ -159,7 +165,7 @@ def main():
 
     freqs_excite = get_excitation_frequency(freqs_modal.to_list())
     plot_mass_distribution(freqs_modal, masses_x, masses_y, masses_z)
-    plot_freqs(freqs_modal, freqs_excite)
+    plot_modal_and_excitation_frequencies(freqs_modal, freqs_excite)
 
 
 if __name__ == '__main__':
