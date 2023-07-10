@@ -2,6 +2,7 @@ import math
 from typing import List
 
 import matplotlib.pyplot as plt
+import numpy.typing as npt
 import pandas as pd
 
 
@@ -49,7 +50,7 @@ def fetch_modal_mass(out_path: str) -> pd.DataFrame:
     return df
 
 
-def plot_mass_distribution(freq_arr: List[float], mass_x_arr: List[float], mass_y_arr: List[float], mass_z_arr: List[float]):
+def plot_mass_distribution(freq_arr: npt.ArrayLike, mass_x_arr: npt.ArrayLike, mass_y_arr: npt.ArrayLike, mass_z_arr: npt.ArrayLike):
     fig = plt.figure(figsize=(6, 2.1), tight_layout=True)
     ax = plt.axes()
     ax.plot(
@@ -91,7 +92,7 @@ def sign(val: float) -> int:
         return 0
 
 
-def get_subrange(freq_ini: float, freq_end: float, nef: int, cluster: float):
+def get_subrange(freq_ini: float, freq_end: float, nef: int, cluster: float) -> Table:
     freqs = []
     for k in range(nef):
         zeta = -1 + 2 * k / (nef - 1)
@@ -123,7 +124,7 @@ def create_freqs_type3(modal_f_arr: List[float], f1: float, f2: float, nef: int,
     return freq3_arr
 
 
-def plot_modal_and_excitation_frequencies(freqs_modal, freqs_excite):
+def plot_modal_and_excitation_frequencies(freqs_modal: npt.ArrayLike, freqs_excite: npt.ArrayLike):
     fig = plt.figure(figsize=(8, 1.6), tight_layout=True)
     ax = plt.axes()
     ax.vlines(
