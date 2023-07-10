@@ -124,6 +124,20 @@ def create_freq3_arr(modal_f_arr: List[float], f1: float, f2: float, nef: int, c
     return freq3_arr
 
 
+def plot_freqs(freqs_modal, freqs_excite):
+    fig = plt.figure(figsize=(8, 1.6), tight_layout=True)
+    ax = plt.axes()
+    ax.vlines(x=freqs_modal, ymin=0.0, ymax=1.0, label='modal', colors='tab:orange', linewidth=0.8)
+    ax.vlines(x=freqs_excite, ymin=-1.0, ymax=0.0, label='excitation', colors='tab:green', linewidth=0.8)
+    ax.set_ybound(lower=-1.0, upper=1.0)
+    ax.set_xlim([0, 700])
+    ax.set_xlabel('frequency, Hz')
+    ax.set_title('Range of frequency')
+    ax.set_yticks([])
+    ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    plt.show()
+
+
 def main():
     mode_arr, freq_arr, mass_x_arr, mass_y_arr, mass_z_arr = \
         fetch_modal_mass(OUT_PATH)
@@ -132,6 +146,7 @@ def main():
     freq_all = list(set(freq2_arr + freq3_arr))
     freq_all.sort()
     plot_mass_distribution(freq_arr, mass_x_arr, mass_y_arr, mass_z_arr)
+    plot_freqs(freq_arr, freq_all)
 
 
 if __name__ == '__main__':
