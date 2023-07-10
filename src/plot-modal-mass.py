@@ -2,11 +2,13 @@ import math
 from typing import List
 
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 OUT_PATH = 'D:/my-analysis/type-m-subassy/test/type-m-subassy-frf.out'
 TEXT_INI = 'MODAL EFFECTIVE MASS FRACTION FOR SUBCASE'
 TEXT_END = 'SUBCASE TOTAL'
+Table = List[List[float]]
 
 
 def tick_line_range(lines: List[str]) -> List[int]:
@@ -28,26 +30,23 @@ def fetch_values_in_line(line: str) -> List[float]:
     return mode, freq, mass_x, mass_y, mass_z
 
 
-def iter_lines(lines: List[str]) -> List[List[float]]:
-    mode_arr, freq_arr, mass_x_arr, mass_y_arr, mass_z_arr = \
-        [], [], [], [], []
+def iter_lines(lines: List[str]) -> Table:
+    table = []
     for line in lines:
-        mode, freq, mass_x, mass_y, mass_z = \
-            fetch_values_in_line(line)
-        mode_arr.append(mode)
-        freq_arr.append(freq)
-        mass_x_arr.append(mass_x)
-        mass_y_arr.append(mass_y)
-        mass_z_arr.append(mass_z)
-    return mode_arr, freq_arr, mass_x_arr, mass_y_arr, mass_z_arr
+        values = fetch_values_in_line(line)
+        table.append(values)
+    return table
 
 
-def fetch_modal_mass(out_path: str):
+def fetch_modal_mass(out_path: str) -> pd.DataFrame:
     with open(out_path, 'r') as f:
         lines = f.readlines()
     tick_ini, tick_end = tick_line_range(lines)
     valid_lines = lines[tick_ini:tick_end+1]
-    return iter_lines(valid_lines)
+    table = iter_lines(valid_lines)
+    columns = ['mode num', 'frequency', 'mass_x', 'mass_y', 'mass_z']
+    df = pd.DataFrame(data=table, columns=columns)
+    return df
 
 
 def plot_mass_distribution(freq_arr: List[float], mass_x_arr: List[float], mass_y_arr: List[float], mass_z_arr: List[float]):
@@ -97,7 +96,7 @@ def get_subrange(freq_ini: float, freq_end: float, nef: int, cluster: float):
     for k in range(nef):
         zeta = -1 + 2 * k / (nef - 1)
         fk = 0.5 * (freq_ini + freq_end) \
-            + 0.5 * (freq_end -freq_ini) * abs(zeta)**(1/cluster) * sign(zeta)
+            + 0.5 * (freq_end - freq_ini) * abs(zeta)**(1/cluster) * sign(zeta)
         fk_arr.append(round(fk, 3))
     return fk_arr
 
@@ -127,8 +126,10 @@ def create_freq3_arr(modal_f_arr: List[float], f1: float, f2: float, nef: int, c
 def plot_freqs(freqs_modal, freqs_excite):
     fig = plt.figure(figsize=(8, 1.6), tight_layout=True)
     ax = plt.axes()
-    ax.vlines(x=freqs_modal, ymin=0.0, ymax=1.0, label='modal', colors='tab:orange', linewidth=0.8)
-    ax.vlines(x=freqs_excite, ymin=-1.0, ymax=0.0, label='excitation', colors='tab:green', linewidth=0.8)
+    ax.vlines(x=freqs_modal, ymin=0.0, ymax=1.0, label='modal',
+              colors='tab:orange', linewidth=0.8)
+    ax.vlines(x=freqs_excite, ymin=-1.0, ymax=0.0,
+              label='excitation', colors='tab:green', linewidth=0.8)
     ax.set_ybound(lower=-1.0, upper=1.0)
     ax.set_xlim([0, 700])
     ax.set_xlabel('frequency, Hz')
@@ -138,15 +139,27 @@ def plot_freqs(freqs_modal, freqs_excite):
     plt.show()
 
 
+def get_excitation_frequency(freqs_modal: List[float]):
+    F1_TYPE2, F2_TYPE2, NF_TYPE2 = 1, 150, 6
+    F1_TYPE3, F2_TYPE3, NEF_TYPE3, CLUSTER_TYPE3 = 150, 600, 5, 2.0
+    freqs_type_2 = create_freq2_arr(F1_TYPE2, F2_TYPE2, NF_TYPE2)
+    freqs_type_3 = create_freq3_arr(
+        freqs_modal, F1_TYPE3, F2_TYPE3,
+        NEF_TYPE3, CLUSTER_TYPE3
+    )
+    freqs_all = list(set(freqs_type_2 + freqs_type_3))
+    freqs_all.sort()
+    return freqs_all
+
+
 def main():
-    mode_arr, freq_arr, mass_x_arr, mass_y_arr, mass_z_arr = \
-        fetch_modal_mass(OUT_PATH)
-    freq2_arr = create_freq2_arr(1, 150, 6)
-    freq3_arr = create_freq3_arr(freq_arr, 150, 600, 5, 2.0)
-    freq_all = list(set(freq2_arr + freq3_arr))
-    freq_all.sort()
-    plot_mass_distribution(freq_arr, mass_x_arr, mass_y_arr, mass_z_arr)
-    plot_freqs(freq_arr, freq_all)
+    df = fetch_modal_mass(OUT_PATH)
+    freqs_modal = df['frequency']
+    masses_x, masses_y, masses_z = df['mass_x'], df['mass_y'], df['mass_z']
+
+    freqs_excite = get_excitation_frequency(freqs_modal.to_list())
+    plot_mass_distribution(freqs_modal, masses_x, masses_y, masses_z)
+    plot_freqs(freqs_modal, freqs_excite)
 
 
 if __name__ == '__main__':
