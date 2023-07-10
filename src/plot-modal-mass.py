@@ -74,16 +74,59 @@ def plot_distribution(freq_arr: List[float], mass_x_arr: List[float], mass_y_arr
 
 def create_freq2_arr(f1: float, f2: float, nf: int) -> List[float]:
     d = math.log(f2 / f1) / nf
-    arr = [f1 * math.exp(itr * d) for itr in range(nf)]
+    arr = [round(f1 * math.exp(itr * d), 3) for itr in range(nf)]
     arr.append(f2)
     return arr
+
+
+def sign(val: float):
+    if val > 0:
+        return 1
+    elif val < 0:
+        return -1
+    elif val == 0:
+        return 0
+
+
+def get_subrange_frequencies(freq_ini: float, freq_end: float, nef: int, cluster: float):
+    fk_arr = []
+    for k in range(nef):
+        zeta = -1 + 2 * k / (nef - 1)
+        fk = 0.5 * (freq_ini + freq_end) + 0.5 * (freq_end - freq_ini) * abs(zeta)**(1/cluster) * sign(zeta)
+        fk_arr.append(round(fk, 3))
+    return fk_arr
+
+
+def create_freq3_arr(modal_f_arr: List[float], f1: float, f2: float, nef: int, cluster: float) -> List[float]:
+    trimmed_arr = modal_f_arr.copy()
+    for val in modal_f_arr:
+        if (val <= f1) or (val >= f2):
+            trimmed_arr.remove(val)
+    
+    trimmed_arr.sort()
+    trimmed_arr.insert(0, f1)
+    trimmed_arr.append(f2)
+    
+    freq3_set = set([])
+    for idx in range(len(trimmed_arr)-1):
+        freq_ini = trimmed_arr[idx]
+        freq_end = trimmed_arr[idx+1]
+        subrange_freqs = get_subrange_frequencies(freq_ini, freq_end, nef, cluster)
+        freq3_set.update(subrange_freqs)
+    
+    freq3_arr = list(freq3_set)
+    freq3_arr.sort()
+    return freq3_arr
 
 
 def main():
     mode_arr, freq_arr, mass_x_arr, mass_y_arr, mass_z_arr = \
         fetch_modal_mass(OUT_PATH)
-    plot_distribution(freq_arr, mass_x_arr, mass_y_arr, mass_z_arr)
     freq2_arr = create_freq2_arr(1, 150, 6)
+    freq3_arr = create_freq3_arr(freq_arr, 150, 600, 5, 2.0)
+    freq_all = list(set(freq2_arr + freq3_arr))
+    freq_all.sort()
+    plot_distribution(freq_arr, mass_x_arr, mass_y_arr, mass_z_arr)
 
 
 if __name__ == '__main__':
