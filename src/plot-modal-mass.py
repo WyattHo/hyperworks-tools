@@ -50,24 +50,28 @@ def fetch_modal_mass(out_path: str):
     return iter_lines(valid_lines)
 
 
-def plot_distribution(freq_arr: List[float], mass_x_arr: List[float], mass_y_arr: List[float], mass_z_arr: List[float]):
-    fig = plt.figure(figsize=(4, 2.4), tight_layout=True)
+def plot_mass_distribution(freq_arr: List[float], mass_x_arr: List[float], mass_y_arr: List[float], mass_z_arr: List[float]):
+    fig = plt.figure(figsize=(6, 2.1), tight_layout=True)
     ax = plt.axes()
-    ax.stem(
-        freq_arr, mass_x_arr,
-        basefmt='tab:orange', linefmt='tab:orange', label='mass_x'
+    ax.plot(
+        freq_arr, mass_x_arr, label='mass_x',
+        linestyle='',
+        marker='o',
+        markerfacecolor=[1.0, 1.0, 1.0, 0.0],
+        markeredgecolor='tab:blue'
     )
-    ax.stem(
-        freq_arr, mass_y_arr,
-        basefmt='tab:blue', linefmt='tab:blue', label='mass_y'
+    ax.plot(
+        freq_arr, mass_y_arr, label='mass_y',
+        linestyle='', marker='x'
     )
-    ax.stem(
-        freq_arr, mass_z_arr,
-        basefmt='tab:green', linefmt='tab:green', label='mass_z'
+    ax.plot(
+        freq_arr, mass_z_arr, label='mass_z',
+        linestyle='', marker='+'
     )
-    ax.set_xlabel('frequency, Hz')
-    ax.set_ylabel('mass fraction')
     ax.set_title('Modal Mass Distribution')
+    ax.set_ylabel('mass fraction')
+    ax.set_xlabel('frequency, Hz')
+    ax.grid(visible=True, axis='both')
     ax.legend()
     plt.show()
 
@@ -88,11 +92,12 @@ def sign(val: float):
         return 0
 
 
-def get_subrange_frequencies(freq_ini: float, freq_end: float, nef: int, cluster: float):
+def get_subrange(freq_ini: float, freq_end: float, nef: int, cluster: float):
     fk_arr = []
     for k in range(nef):
         zeta = -1 + 2 * k / (nef - 1)
-        fk = 0.5 * (freq_ini + freq_end) + 0.5 * (freq_end - freq_ini) * abs(zeta)**(1/cluster) * sign(zeta)
+        fk = 0.5 * (freq_ini + freq_end) \
+            + 0.5 * (freq_end -freq_ini) * abs(zeta)**(1/cluster) * sign(zeta)
         fk_arr.append(round(fk, 3))
     return fk_arr
 
@@ -102,18 +107,18 @@ def create_freq3_arr(modal_f_arr: List[float], f1: float, f2: float, nef: int, c
     for val in modal_f_arr:
         if (val <= f1) or (val >= f2):
             trimmed_arr.remove(val)
-    
+
     trimmed_arr.sort()
     trimmed_arr.insert(0, f1)
     trimmed_arr.append(f2)
-    
+
     freq3_set = set([])
     for idx in range(len(trimmed_arr)-1):
         freq_ini = trimmed_arr[idx]
         freq_end = trimmed_arr[idx+1]
-        subrange_freqs = get_subrange_frequencies(freq_ini, freq_end, nef, cluster)
-        freq3_set.update(subrange_freqs)
-    
+        subrange = get_subrange(freq_ini, freq_end, nef, cluster)
+        freq3_set.update(subrange)
+
     freq3_arr = list(freq3_set)
     freq3_arr.sort()
     return freq3_arr
@@ -126,7 +131,7 @@ def main():
     freq3_arr = create_freq3_arr(freq_arr, 150, 600, 5, 2.0)
     freq_all = list(set(freq2_arr + freq3_arr))
     freq_all.sort()
-    plot_distribution(freq_arr, mass_x_arr, mass_y_arr, mass_z_arr)
+    plot_mass_distribution(freq_arr, mass_x_arr, mass_y_arr, mass_z_arr)
 
 
 if __name__ == '__main__':
