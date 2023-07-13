@@ -28,6 +28,7 @@ set loops [hm_getedgeloops surfs markid=1]
 ## If the loop is closed, the first and last ID are the same.
 
 # Get nodes on each loop lines
+set tgt_loop_count 0
 foreach loop_data $loops {
     # Parameters for the while loop
     set idx 2
@@ -58,6 +59,7 @@ foreach loop_data $loops {
 
     # Create RBE3
     if {$area > $area_min & $area < $area_max} {
+        incr tgt_loop_count 1
         set node_num [llength $node_indices]
         set dofs [create_list_filled_with_value $node_num 123]
         set weights [create_list_filled_with_value $node_num 1]
@@ -65,7 +67,6 @@ foreach loop_data $loops {
         eval *createdoublearray 23 $weights
         eval *rbe3 1 1 $node_num 1 $node_num 0 123456 1
     }
-
     *clearmark nodes 1
 }
-puts "Done!"
+puts "Done! Created $tgt_loop_count RBE3s."
