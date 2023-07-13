@@ -5,7 +5,7 @@ proc extrac_line_indices {loop_data} {
     set idx_end [expr $data_len - 1]
     set line_indices [lindex $loop_data 1]
 
-    # Collect line indices for each line loop
+    # Collect line indices
     while {$idx < $idx_end} {
         lappend line_indices [lindex $loop_data $idx]
         incr idx 1
@@ -71,33 +71,25 @@ proc create_rbe3 {mark_id node_indices} {
 }
 
 
-# Select the target surface
-*createmarkpanel surfs 1 "Please select the target surface.."
-
-# Input the target dimension
-set dimension_x [hm_getstring "Dimension in x direction: " "Please enter.."]
-set dimension_y [hm_getstring "Dimension in y direction: " "Please enter.."]
-
-# Returns surface and element free and non-manifold edge loop entities.
-set loops [hm_getedgeloops surfs markid=1]
-## {128 6181 8930 6181} {128 6183 8929 6183} {128 6185 8928 6185}, ...
-## {type line-id line-id line-id}
-## The first value in each loop list is the loop type.
-## The remaining values are the ordered node/surface edge IDs defining the loop.
-## If the loop is closed, the first and last ID are the same.
-
-# Get nodes on each loop lines
-set tgt_loop_count 0
-foreach loop_data $loops {
-    set line_indices [extrac_line_indices $loop_data]
-    set node_indices [extrac_node_indices $line_indices]
-    set mark_id 1
-    eval *createmark nodes $mark_id $node_indices
-    set is_target [check_target $mark_id $dimension_x $dimension_y]
-    if {$is_target} {
-        incr tgt_loop_count 1
-        create_rbe3 $mark_id $node_indices
+proc main {} {
+    *createmarkpanel surfs 1 "Please select the target surface.."
+    set dimension_x [hm_getstring "Dimension in x direction: " "Please enter.."]
+    set dimension_y [hm_getstring "Dimension in y direction: " "Please enter.."]
+    set loops [hm_getedgeloops surfs markid=1]
+    set tgt_loop_count 0
+    foreach loop_data $loops {
+        set line_indices [extrac_line_indices $loop_data]
+        set node_indices [extrac_node_indices $line_indices]
+        set mark_id 1
+        eval *createmark nodes $mark_id $node_indices
+        set is_target [check_target $mark_id $dimension_x $dimension_y]
+        if {$is_target} {
+            incr tgt_loop_count 1
+            create_rbe3 $mark_id $node_indices
+        }
+        *clearmark nodes $mark_id
     }
-    *clearmark nodes $mark_id
+    puts "Done! Created $tgt_loop_count RBE3s."
 }
-puts "Done! Created $tgt_loop_count RBE3s."
+
+main
