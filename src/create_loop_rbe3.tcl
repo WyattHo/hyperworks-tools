@@ -6,6 +6,16 @@ proc create_list_filled_with_value {length val} {
     return $answer
 }
 
+
+proc create_line_list {line_indices} {
+    set answer line
+    foreach idx $line_indices {
+        lappend answer $idx
+    }
+    return $answer
+}
+
+
 # Select the target surface
 *createmarkpanel surfs 1 "Please select the target surface.."
 
@@ -32,7 +42,8 @@ foreach loop_data $loops {
     }
 
     # Collect nodes for each line loop
-    set node_indices [hm_getgeometrynodes [list lines $line_indices] node_query=points]
+    set looplines [create_line_list $line_indices]
+    set node_indices [hm_getgeometrynodes $looplines node_query=points]
 
     # Analyze the area of the line loop
     eval *createmark nodes 1 $node_indices
