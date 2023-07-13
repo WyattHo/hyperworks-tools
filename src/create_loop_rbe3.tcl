@@ -14,22 +14,13 @@ proc extrac_line_indices {loop_data} {
 }
 
 
-proc create_line_list {line_indices} {
-    set answer line
-    foreach idx $line_indices {
-        lappend answer $idx
-    }
-    return $answer
-}
-
-
 proc extrac_node_indices {line_indices} {
     # Collect nodes for each line loop
-    set looplines [create_line_list $line_indices]
-    set node_indices [hm_getgeometrynodes $looplines node_query=points]
+    set line_list [linsert $line_indices 0 line]
+    set node_indices [hm_getgeometrynodes $line_list node_query=points]
     set node_num [llength $node_indices]
     if {$node_num == 0} {
-        set node_indices [hm_getgeometrynodes $looplines node_query=points query_type=fegeometry]
+        set node_indices [hm_getgeometrynodes $line_list node_query=points query_type=fegeometry]
     }
     return $node_indices
 }
