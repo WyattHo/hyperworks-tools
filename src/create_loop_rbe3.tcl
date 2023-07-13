@@ -7,12 +7,40 @@ proc create_list_filled_with_value {length val} {
 }
 
 
+proc extrac_line_indices {loop_data} {
+    # Parameters for the while loop
+    set idx 2
+    set data_len [llength $loop_data]
+    set idx_end [expr $data_len - 1]
+    set line_indices [lindex $loop_data 1]
+
+    # Collect line indices for each line loop
+    while {$idx < $idx_end} {
+        lappend line_indices [lindex $loop_data $idx]
+        incr idx 1
+    }
+    return $line_indices
+}
+
+
 proc create_line_list {line_indices} {
     set answer line
     foreach idx $line_indices {
         lappend answer $idx
     }
     return $answer
+}
+
+
+proc extrac_node_indices {line_indices} {
+    # Collect nodes for each line loop
+    set looplines [create_line_list $line_indices]
+    set node_indices [hm_getgeometrynodes $looplines node_query=points]
+    set node_num [llength $node_indices]
+    if {$node_num == 0} {
+        set node_indices [hm_getgeometrynodes $looplines node_query=points query_type=fegeometry]
+    }
+    return $node_indices
 }
 
 
@@ -34,25 +62,8 @@ set loops [hm_getedgeloops surfs markid=1]
 # Get nodes on each loop lines
 set tgt_loop_count 0
 foreach loop_data $loops {
-    # Parameters for the while loop
-    set idx 2
-    set data_len [llength $loop_data]
-    set idx_end [expr $data_len - 1]
-    set line_indices [lindex $loop_data 1]
-
-    # Collect line indices for each line loop
-    while {$idx < $idx_end} {
-        lappend line_indices [lindex $loop_data $idx]
-        incr idx 1
-    }
-
-    # Collect nodes for each line loop
-    set looplines [create_line_list $line_indices]
-    set node_indices [hm_getgeometrynodes $looplines node_query=points]
-    set node_num [llength $node_indices]
-    if {$node_num == 0} {
-        set node_indices [hm_getgeometrynodes $looplines node_query=points query_type=fegeometry]
-    }
+    set line_indices [extrac_line_indices $loop_data]
+    set node_indices [extrac_node_indices $line_indices]
 
     # Analyze the area of the line loop
     eval *createmark nodes 1 $node_indices
