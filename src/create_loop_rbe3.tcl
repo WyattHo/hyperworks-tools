@@ -44,6 +44,23 @@ proc extrac_node_indices {line_indices} {
 }
 
 
+proc check_target {mark_id dimension_x dimension_y} {
+    set bbox [hm_getboundingbox nodes $mark_id 0 0 0]
+    set x_min [lindex $bbox 0]
+    set y_min [lindex $bbox 1]
+    set x_max [lindex $bbox 3]
+    set y_max [lindex $bbox 4]
+    set delta_x [expr $x_max - $x_min]
+    set delta_y [expr $y_max - $y_min]
+    set delta_x_min [expr 0.9 * $dimension_x]
+    set delta_x_max [expr 1.1 * $dimension_x]
+    set delta_y_min [expr 0.9 * $dimension_y]
+    set delta_y_max [expr 1.1 * $dimension_y]
+    set is_target [expr $delta_x > $delta_x_min & $delta_x < $delta_x_max & $delta_y > $delta_y_min & $delta_y < $delta_y_max]
+    return $is_target
+}
+
+
 # Select the target surface
 *createmarkpanel surfs 1 "Please select the target surface.."
 
@@ -64,25 +81,12 @@ set tgt_loop_count 0
 foreach loop_data $loops {
     set line_indices [extrac_line_indices $loop_data]
     set node_indices [extrac_node_indices $line_indices]
-
-    # Analyze the area of the line loop
     eval *createmark nodes 1 $node_indices
-    set bbox [hm_getboundingbox nodes 1 0 0 0]
-    set x_min [lindex $bbox 0]
-    set y_min [lindex $bbox 1]
-    set x_max [lindex $bbox 3]
-    set y_max [lindex $bbox 4]
+    set is_target [check_target 1 $dimension_x $dimension_y]
     
-    set delta_x [expr $x_max - $x_min]
-    set delta_x_min [expr 0.9 * $dimension_x]
-    set delta_x_max [expr 1.1 * $dimension_x]
-    
-    set delta_y [expr $y_max - $y_min]
-    set delta_y_min [expr 0.9 * $dimension_y]
-    set delta_y_max [expr 1.1 * $dimension_y]
-
     # Create RBE3
-    if {$delta_x > $delta_x_min & $delta_x < $delta_x_max & $delta_y > $delta_y_min & $delta_y < $delta_y_max} {
+    if {$is_target} {
+        puts $is_target
         incr tgt_loop_count 1
         set node_num [llength $node_indices]
         set dofs [create_list_filled_with_value $node_num 123]
