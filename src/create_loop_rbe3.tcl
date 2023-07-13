@@ -19,6 +19,9 @@ proc create_line_list {line_indices} {
 # Select the target surface
 *createmarkpanel surfs 1 "Please select the target surface.."
 
+# Input the target radius
+set radius [hm_getstring "Radius: " "Please enter the target radius"]
+
 # Returns surface and element free and non-manifold edge loop entities.
 set loops [hm_getedgeloops surfs markid=1]
 ## {128 6181 8930 6181} {128 6183 8929 6183} {128 6185 8928 6185}, ...
@@ -55,7 +58,6 @@ foreach loop_data $loops {
     set y_max [lindex $bbox 4]
     set delta_x [expr $x_max - $x_min]
     set delta_y [expr $y_max - $y_min]
-    set radius 0.015
     set delta_min [expr 0.9 * $radius]
     set delta_max [expr 1.1 * $radius]
 
