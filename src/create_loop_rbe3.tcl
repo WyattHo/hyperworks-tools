@@ -1,3 +1,11 @@
+proc create_list_filled_with_value {length val} {
+    set answer ""
+    for {set i 0} {$i < $length} {incr i} {
+        lappend answer $val
+    }
+    return $answer
+}
+
 # Select the target surface
 *createmarkpanel surfs 1 "Please select the target surface.."
 
@@ -5,8 +13,8 @@
 set loops [hm_getedgeloops surfs markid=1]
 ## {128 6181 8930 6181} {128 6183 8929 6183} {128 6185 8928 6185}, ...
 ## {type line-id line-id line-id}
-## The first value in each loop list is the loop type. 
-## The remaining values are the ordered node/surface edge IDs defining the loop. 
+## The first value in each loop list is the loop type.
+## The remaining values are the ordered node/surface edge IDs defining the loop.
 ## If the loop is closed, the first and last ID are the same.
 
 # Get nodes on each loop lines
@@ -26,7 +34,7 @@ foreach loop_data $loops {
     # Collect nodes for each line loop
     set node_indices [hm_getgeometrynodes [list lines $line_indices] node_query=points]
     puts $node_indices
-    
+
     # Analyze the area of the line loop
     eval *createmark nodes 1 $node_indices
     set bbox [hm_getboundingbox nodes 1 0 0 0]
@@ -37,17 +45,13 @@ foreach loop_data $loops {
     set area [expr ($x_max - $x_min) * ($y_max - $y_min)]
     set area_criteria 400
 
-    # # Create RBE3
-    # if {$area < $area_criteria} {
-    #     puts $area
-    # }
+    # Create RBE3
+    if {$area < $area_criteria} {
+        set node_num [llength $node_indices]
+        set dofs [create_list_filled_with_value $node_num 123]
+        set weights [create_list_filled_with_value $node_num 1]
+        eval *createarray 23 $dofs
+        eval *createdoublearray 23 $weights
+        eval *rbe3 1 1 $node_num 1 $node_num 0 123456 1
+    }
 }
-
-
-# *createmark nodes 2 5493161 5493160 5493159 5493158 5493157 5493156 5493155 \
-#     5493154 5493153 5493152 5493151 5479208 5479207 5479206 5479205 5479204 5479203 \
-#     5479202 5479201 5479200 5479199 5479198 5479197
-# *createarray 23 123 123 123 123 123 123 123 123 123 123 123 123 123 123 123 \
-#     123 123 123 123 123 123 123 123
-# *createdoublearray 23 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-# *rbe3 2 1 23 1 23 0 123456 1
