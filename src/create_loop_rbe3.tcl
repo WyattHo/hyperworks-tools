@@ -53,12 +53,14 @@ foreach loop_data $loops {
     set y_min [lindex $bbox 1]
     set x_max [lindex $bbox 3]
     set y_max [lindex $bbox 4]
-    set area [expr ($x_max - $x_min) * ($y_max - $y_min)]
-    set area_min [expr 0.8 * 0.015 * 0.015]
-    set area_max [expr 1.5 * 0.015 * 0.015]
+    set delta_x [expr $x_max - $x_min]
+    set delta_y [expr $y_max - $y_min]
+    set radius 0.015
+    set delta_min [expr 0.9 * $radius]
+    set delta_max [expr 1.1 * $radius]
 
     # Create RBE3
-    if {$area > $area_min & $area < $area_max} {
+    if {$delta_x > $delta_min & $delta_x < $delta_max & $delta_y > $delta_min & $delta_y < $delta_max} {
         incr tgt_loop_count 1
         set node_num [llength $node_indices]
         set dofs [create_list_filled_with_value $node_num 123]
