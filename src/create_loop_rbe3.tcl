@@ -48,6 +48,10 @@ foreach loop_data $loops {
     # Collect nodes for each line loop
     set looplines [create_line_list $line_indices]
     set node_indices [hm_getgeometrynodes $looplines node_query=points]
+    set node_num [llength $node_indices]
+    if {$node_num == 0} {
+        set node_indices [hm_getgeometrynodes $looplines node_query=points query_type=fegeometry]
+    }
 
     # Analyze the area of the line loop
     eval *createmark nodes 1 $node_indices
