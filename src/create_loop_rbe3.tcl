@@ -19,8 +19,9 @@ proc create_line_list {line_indices} {
 # Select the target surface
 *createmarkpanel surfs 1 "Please select the target surface.."
 
-# Input the target radius
-set radius [hm_getstring "Radius: " "Please enter the target radius"]
+# Input the target dimension
+set dimension_x [hm_getstring "Dimension in x direction: " "Please enter.."]
+set dimension_y [hm_getstring "Dimension in y direction: " "Please enter.."]
 
 # Returns surface and element free and non-manifold edge loop entities.
 set loops [hm_getedgeloops surfs markid=1]
@@ -60,13 +61,17 @@ foreach loop_data $loops {
     set y_min [lindex $bbox 1]
     set x_max [lindex $bbox 3]
     set y_max [lindex $bbox 4]
+    
     set delta_x [expr $x_max - $x_min]
+    set delta_x_min [expr 0.9 * $dimension_x]
+    set delta_x_max [expr 1.1 * $dimension_x]
+    
     set delta_y [expr $y_max - $y_min]
-    set delta_min [expr 0.9 * $radius]
-    set delta_max [expr 1.1 * $radius]
+    set delta_y_min [expr 0.9 * $dimension_y]
+    set delta_y_max [expr 1.1 * $dimension_y]
 
     # Create RBE3
-    if {$delta_x > $delta_min & $delta_x < $delta_max & $delta_y > $delta_min & $delta_y < $delta_max} {
+    if {$delta_x > $delta_x_min & $delta_x < $delta_x_max & $delta_y > $delta_y_min & $delta_y < $delta_y_max} {
         incr tgt_loop_count 1
         set node_num [llength $node_indices]
         set dofs [create_list_filled_with_value $node_num 123]
