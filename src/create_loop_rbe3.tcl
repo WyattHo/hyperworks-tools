@@ -33,7 +33,6 @@ foreach loop_data $loops {
 
     # Collect nodes for each line loop
     set node_indices [hm_getgeometrynodes [list lines $line_indices] node_query=points]
-    puts $node_indices
 
     # Analyze the area of the line loop
     eval *createmark nodes 1 $node_indices
@@ -43,10 +42,11 @@ foreach loop_data $loops {
     set x_max [lindex $bbox 3]
     set y_max [lindex $bbox 4]
     set area [expr ($x_max - $x_min) * ($y_max - $y_min)]
-    set area_criteria 400
+    set area_min [expr 0.8 * 0.015 * 0.015]
+    set area_max [expr 1.5 * 0.015 * 0.015]
 
     # Create RBE3
-    if {$area < $area_criteria} {
+    if {$area > $area_min & $area < $area_max} {
         set node_num [llength $node_indices]
         set dofs [create_list_filled_with_value $node_num 123]
         set weights [create_list_filled_with_value $node_num 1]
@@ -54,4 +54,7 @@ foreach loop_data $loops {
         eval *createdoublearray 23 $weights
         eval *rbe3 1 1 $node_num 1 $node_num 0 123456 1
     }
+
+    *clearmark nodes 1
 }
+puts "Done!"
