@@ -26,8 +26,8 @@ proc extrac_node_indices {line_indices} {
 }
 
 
-proc check_target {mark_id dimension_x dimension_y} {
-    set bbox [hm_getboundingbox nodes $mark_id 0 0 0]
+proc check_target {markid_nodes dimension_x dimension_y} {
+    set bbox [hm_getboundingbox nodes $markid_nodes 0 0 0]
     set x_min [lindex $bbox 0]
     set y_min [lindex $bbox 1]
     set x_max [lindex $bbox 3]
@@ -52,33 +52,34 @@ proc create_list_filled_with_value {length val} {
 }
 
 
-proc create_rbe3 {mark_id node_indices} {
+proc create_rbe3 {markid_nodes node_indices} {
     set node_num [llength $node_indices]
     set dofs [create_list_filled_with_value $node_num 123]
     set weights [create_list_filled_with_value $node_num 1]
     eval *createarray 23 $dofs
     eval *createdoublearray 23 $weights
-    eval *rbe3 $mark_id 1 $node_num 1 $node_num 0 123456 1
+    eval *rbe3 $markid_nodes 1 $node_num 1 $node_num 0 123456 1
 }
 
 
 proc main {} {
-    *createmarkpanel surfs 1 "Please select the target surface.."
+    set markid_surfs 1
+    *createmarkpanel surfs $markid_surfs "Please select the target surface.."
     set dimension_x [hm_getstring "Dimension in x direction: " "Please enter.."]
     set dimension_y [hm_getstring "Dimension in y direction: " "Please enter.."]
-    set loops [hm_getedgeloops surfs markid=1]
+    set loops_data [hm_getedgeloops surfs markid=$markid_surfs]
     set tgt_loop_count 0
-    foreach loop_data $loops {
+    foreach loop_data $loops_data {
         set line_indices [extrac_line_indices $loop_data]
         set node_indices [extrac_node_indices $line_indices]
-        set mark_id 1
-        eval *createmark nodes $mark_id $node_indices
-        set is_target [check_target $mark_id $dimension_x $dimension_y]
+        set markid_nodes 1
+        eval *createmark nodes $markid_nodes $node_indices
+        set is_target [check_target $markid_nodes $dimension_x $dimension_y]
         if {$is_target} {
             incr tgt_loop_count 1
-            create_rbe3 $mark_id $node_indices
+            create_rbe3 $markid_nodes $node_indices
         }
-        *clearmark nodes $mark_id
+        *clearmark nodes $markid_nodes
     }
     puts "Done! Created $tgt_loop_count RBE3s."
 }
