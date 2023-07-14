@@ -1,21 +1,20 @@
+# extrac_line_indices --
+#
+#   The first value in each loop data is the loop type.
+#   The remaining values are the ordered line IDs defining the loop.
+#   If the loop is closed, the first and last ID are the same.
+#   This function extrac only the values of unique line IDs.
+# ...
 proc extrac_line_indices {loop_data} {
-    # Parameters for the while loop
-    set idx 2
+    set idx_str 1
     set data_len [llength $loop_data]
     set idx_end [expr $data_len - 1]
-    set line_indices [lindex $loop_data 1]
-
-    # Collect line indices
-    while {$idx < $idx_end} {
-        lappend line_indices [lindex $loop_data $idx]
-        incr idx 1
-    }
+    set line_indices [lrange $loop_data $idx_str $idx_end]
     return $line_indices
 }
 
 
 proc extrac_node_indices {line_indices} {
-    # Collect nodes for each line loop
     set line_list [linsert $line_indices 0 line]
     set node_indices [hm_getgeometrynodes $line_list node_query=points]
     set node_num [llength $node_indices]
@@ -38,24 +37,18 @@ proc check_target {markid_nodes dimension_x dimension_y} {
     set delta_x_max [expr 1.1 * $dimension_x]
     set delta_y_min [expr 0.9 * $dimension_y]
     set delta_y_max [expr 1.1 * $dimension_y]
-    set is_target [expr $delta_x > $delta_x_min & $delta_x < $delta_x_max & $delta_y > $delta_y_min & $delta_y < $delta_y_max]
+    set is_target [expr ($delta_x > $delta_x_min)\
+                        && ($delta_x < $delta_x_max)\
+                        && ($delta_y > $delta_y_min)\
+                        && ($delta_y < $delta_y_max)]
     return $is_target
-}
-
-
-proc create_list_filled_with_value {length val} {
-    set answer ""
-    for {set i 0} {$i < $length} {incr i} {
-        lappend answer $val
-    }
-    return $answer
 }
 
 
 proc create_rbe3 {markid_nodes node_indices} {
     set node_num [llength $node_indices]
-    set dofs [create_list_filled_with_value $node_num 123]
-    set weights [create_list_filled_with_value $node_num 1]
+    set dofs [lrepeat $node_num 123]
+    set weights [lrepeat $node_num 1]
     eval *createarray 23 $dofs
     eval *createdoublearray 23 $weights
     eval *rbe3 $markid_nodes 1 $node_num 1 $node_num 0 123456 1
