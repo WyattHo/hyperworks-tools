@@ -1,13 +1,3 @@
-# Options good to try
-# hm_getbestcirclecenter
-# hm_getcentroid
-# hm_getclosestnode
-#
-# hm_getdistance --
-#     手選 Copper 和 Holder 的 RBE3，
-#     遍歷 RBE3 找另一個最接近的 RBE3
-#     找到後設定 MPC
-# ---
 proc get_dependent_nodes {elem_indices} {
     set dependent_nodes ""
     foreach elem_idx $elem_indices {
@@ -17,14 +7,36 @@ proc get_dependent_nodes {elem_indices} {
 }
 
 
+proc find_rbe3_pairs {node_indices} {
+    set rbe3_pairs ""
+    set already_considered ""
+    foreach node_idx_current $node_indices {
+        if {[lsearch $already_considered $node_idx_current] < 0} {
+            set idx_current [lsearch $node_indices $node_idx_current]
+            set other_indices [lreplace $node_indices $idx_current $idx_current]
+
+            set distances ""
+            foreach node_idx $other_indices {
+                lappend distances [lindex [hm_getdistance nodes $node_idx_current $node_idx 0] 0]
+            }
+
+            set min [lindex [lsort $distances] 0]
+            set idx_closest [lsearch $distances $min]
+            set node_idx_closest [lindex $other_indices $idx_closest]
+
+            set already_considered [linsert $already_considered end $node_idx_current]
+            set already_considered [linsert $already_considered end $node_idx_closest]
+            lappend rbe3_pairs "$node_idx_current $node_idx_closest"
+        }
+    }
+    return $rbe3_pairs
+}
+
 set markid_elems 1
 *createmarkpanel elems $markid_elems "Please select the target elements.."
 set elem_indices [hm_getmark elems $markid_elems]
 set dependent_nodes [get_dependent_nodes $elem_indices]
-
-
-
-
+set rbe3_pairs [find_rbe3_pairs $dependent_nodes]
 
 
 # # NodeCr
