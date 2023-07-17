@@ -1,5 +1,5 @@
 proc get_dependent_nodes {elem_indices} {
-    set dependent_nodes ""
+    set dependent_nodes {}
     foreach elem_idx $elem_indices {
         lappend dependent_nodes [hm_getvalue element id=$elem_idx dataname=dependentnode]
     }
@@ -8,29 +8,27 @@ proc get_dependent_nodes {elem_indices} {
 
 
 proc find_rbe3_pairs {node_indices} {
-    set rbe3_pairs ""
-    set already_considered ""
+    set rbe3_pairs {}
+    set already_considered {}
     foreach node_idx_current $node_indices {
-        if {[lsearch $already_considered $node_idx_current] < 0} {
-            set idx_current [lsearch $node_indices $node_idx_current]
-            set other_indices [lreplace $node_indices $idx_current $idx_current]
-
-            set distances ""
-            foreach node_idx $other_indices {
-                lappend distances [lindex [hm_getdistance nodes $node_idx_current $node_idx 0] 0]
-            }
-
-            set min [lindex [lsort $distances] 0]
-            set idx_closest [lsearch $distances $min]
-            set node_idx_closest [lindex $other_indices $idx_closest]
-
-            set already_considered [linsert $already_considered end $node_idx_current]
-            set already_considered [linsert $already_considered end $node_idx_closest]
-            lappend rbe3_pairs "$node_idx_current $node_idx_closest"
+        if {$node_idx_current in $already_considered} {
+            continue
         }
+        set idx_current [lsearch $node_indices $node_idx_current]
+        set other_indices [lreplace $node_indices $idx_current $idx_current]
+        set distances {}
+        foreach node_idx $other_indices {
+            lappend distances [lindex [hm_getdistance nodes $node_idx_current $node_idx 0] 0]
+        }
+        set distance_min [lindex [lsort $distances] 0]
+        set idx_closest [lsearch $distances $distance_min]
+        set node_idx_closest [lindex $other_indices $idx_closest]
+        lappend rbe3_pairs "$node_idx_current $node_idx_closest"
+        lappend already_considered $node_idx_current $node_idx_closest
     }
     return $rbe3_pairs
 }
+
 
 set markid_elems 1
 *createmarkpanel elems $markid_elems "Please select the target elements.."
