@@ -66,17 +66,20 @@ proc create_mpc {independent_nodes dependent_node} {
 }
 
 
-set markid_elems 1
-*createmarkpanel elems $markid_elems "Please select the target elements.."
-set elem_indices [hm_getmark elems $markid_elems]
-set dependent_nodes [get_dependent_nodes $elem_indices]
-set rbe3_pairs [find_rbe3_pairs $dependent_nodes]
-
-foreach node_pair $rbe3_pairs {
-    lassign $node_pair node1 node2
-    eval *createnodesbetweennodes $node1 $node2 1
-    set dependent_node [get_latest_node_id]
-    create_mpc $node_pair $dependent_node
+proc main {} {
+    set markid_elems 1
+    *createmarkpanel elems $markid_elems "Please select the target elements.."
+    set elem_indices [hm_getmark elems $markid_elems]
+    set dependent_nodes [get_dependent_nodes $elem_indices]
+    set rbe3_pairs [find_rbe3_pairs $dependent_nodes]
+    foreach node_pair $rbe3_pairs {
+        lassign $node_pair node1 node2
+        eval *createnodesbetweennodes $node1 $node2 1
+        set dependent_node [get_latest_node_id]
+        create_mpc $node_pair $dependent_node
+    }
+    *clearmark elems $markid_elems
 }
 
-*clearmark elems $markid_elems
+
+main
