@@ -49,8 +49,8 @@ proc create_rbe3 {markid_nodes node_indices} {
     set node_num [llength $node_indices]
     set dofs [lrepeat $node_num 123]
     set weights [lrepeat $node_num 1]
-    eval *createarray 23 $dofs
-    eval *createdoublearray 23 $weights
+    eval *createarray $node_num $dofs
+    eval *createdoublearray $node_num $weights
     eval *rbe3 $markid_nodes 1 $node_num 1 $node_num 0 123456 1
 }
 
@@ -76,5 +76,6 @@ proc main {} {
     }
     puts "Done! Created $tgt_loop_count RBE3s."
 }
+
 
 main
