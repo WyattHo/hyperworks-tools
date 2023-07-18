@@ -49,6 +49,7 @@ proc create_mpc {independent_nodes dependent_node} {
     *equationcreate $markid_nodes 1 $dof_size 1 $weight_size $dependent_node 3 1.0 0.0
     *setvalue equations id=-1 STATUS=2 ROW=0 independentcoeffs3={1}
     *setvalue equations id=-1 STATUS=2 ROW=1 independentcoeffs3={-1}
+    *clearmark nodes $markid_nodes
 }
 
 
