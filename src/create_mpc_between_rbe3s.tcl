@@ -47,8 +47,8 @@ proc create_mpc {independent_nodes dependent_node} {
     *createarray $dof_size [lrepeat $dof_size 4]
     *createdoublearray $weight_size [lrepeat $weight_size 1.0]
     *equationcreate $markid_nodes 1 $dof_size 1 $weight_size $dependent_node 3 1.0 0.0
-    # *setvalue equations id=1 STATUS=2 ROW=0 independentcoeffs3= {1}
-    # *setvalue equations id=1 STATUS=2 ROW=1 independentcoeffs3= {-1}
+    *setvalue equations id=-1 STATUS=2 ROW=0 independentcoeffs3={1}
+    *setvalue equations id=-1 STATUS=2 ROW=1 independentcoeffs3={-1}
 }
 
 
@@ -62,7 +62,6 @@ foreach node_pair $rbe3_pairs {
     lassign $node_pair node1 node2
     eval *createnodesbetweennodes $node1 $node2 1
     set dependent_node [get_latest_node_id]
-    break
     create_mpc $node_pair $dependent_node
 }
 
