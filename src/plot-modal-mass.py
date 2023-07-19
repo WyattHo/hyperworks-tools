@@ -80,6 +80,10 @@ def plot_mass_distribution(freq_arr: npt.ArrayLike, mass_x_arr: npt.ArrayLike, m
     plt.show()
 
 
+def create_freqs_type1(f1: float, df: float, ndf: int) -> List[float]:
+    return [f1 + idx * df for idx in range(ndf + 1)]
+
+
 def create_freqs_type2(f1: float, f2: float, nf: int) -> List[float]:
     d = math.log(f2 / f1) / nf
     freqs = [round(f1 * math.exp(itr * d), 3) for itr in range(nf)]
@@ -152,6 +156,13 @@ def get_excitation_frequency(freqs_modal: List[float]):
     config = configparser.ConfigParser()
     config.read(config_file)
     freqs = []
+    if 'TYPE1' in config:
+        f1 = eval(config['TYPE1']['F1'])
+        df = eval(config['TYPE1']['DF'])
+        ndf = eval(config['TYPE1']['NDF'])
+        freqs += create_freqs_type1(
+            f1, df, ndf
+        )
     if 'TYPE2' in config:
         f1 = eval(config['TYPE2']['F1'])
         f2 = eval(config['TYPE2']['F2'])
