@@ -1,14 +1,18 @@
+import configparser
 import math
+import os
 from typing import List
 
 import matplotlib.pyplot as plt
 import numpy.typing as npt
 import pandas as pd
 
-
 OUT_PATH = 'D:/my-analysis/type-m-subassy/test/type-m-subassy-frf.out'
 TEXT_INI = 'MODAL EFFECTIVE MASS FRACTION FOR SUBCASE'
 TEXT_END = 'SUBCASE TOTAL'
+this_dir = os.path.dirname(__file__)
+config_file = os.path.join(this_dir, 'excitation_freq.ini')
+
 Table = List[List[float]]
 
 
@@ -145,16 +149,26 @@ def plot_modal_and_excitation_frequencies(freqs_modal: npt.ArrayLike, freqs_exci
 
 
 def get_excitation_frequency(freqs_modal: List[float]):
-    F1_TYPE2, F2_TYPE2, NF_TYPE2 = 1, 150, 6
-    F1_TYPE3, F2_TYPE3, NEF_TYPE3, CLUSTER_TYPE3 = 150, 600, 5, 2.0
-    freqs_type_2 = create_freqs_type2(
-        F1_TYPE2, F2_TYPE2, NF_TYPE2
-    )
-    freqs_type_3 = create_freqs_type3(
-        freqs_modal, F1_TYPE3, F2_TYPE3,
-        NEF_TYPE3, CLUSTER_TYPE3
-    )
-    freqs_excite = list(set(freqs_type_2 + freqs_type_3))
+    config = configparser.ConfigParser()
+    config.read(config_file)
+    freqs = []
+    if 'TYPE2' in config:
+        f1 = eval(config['TYPE2']['F1'])
+        f2 = eval(config['TYPE2']['F2'])
+        nf = eval(config['TYPE2']['NF'])
+        freqs += create_freqs_type2(
+            f1, f2, nf
+        )
+    if 'TYPE3' in config:
+        f1 = eval(config['TYPE3']['F1'])
+        f2 = eval(config['TYPE3']['F2'])
+        nef = eval(config['TYPE3']['NEF'])
+        cluster = eval(config['TYPE3']['CLUSTER'])
+        freqs += create_freqs_type3(
+            freqs_modal, f1, f2,
+            nef, cluster
+        )
+    freqs_excite = list(set(freqs))
     freqs_excite.sort()
     return freqs_excite
 
