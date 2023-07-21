@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 this_dir = os.path.dirname(__file__)
-config_file = os.path.join(this_dir, 'excitation_freq.ini')
+config_file = os.path.join(this_dir, 'config.ini')
 config = configparser.ConfigParser()
 config.read(config_file)
 

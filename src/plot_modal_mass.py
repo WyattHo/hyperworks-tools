@@ -11,7 +11,7 @@ OUT_PATH = 'D:/my-analysis/type-m-subassy/test/type-m-subassy-frf.out'
 TEXT_INI = 'MODAL EFFECTIVE MASS FRACTION FOR SUBCASE'
 TEXT_END = 'SUBCASE TOTAL'
 this_dir = os.path.dirname(__file__)
-config_file = os.path.join(this_dir, 'excitation_freq.ini')
+config_file = os.path.join(this_dir, 'config.ini')
 
 Table = List[List[float]]
 
