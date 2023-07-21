@@ -1,3 +1,4 @@
+import configparser
 import csv
 import os
 from typing import Dict, List
@@ -5,9 +6,14 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 
 
-DATA_DIR = 'D:\\my-analysis\\type-m-subassy\\data'
-CURVE_NUM_EACH_PLOT = 5
-TIME_RANGE = [0, 200]
+this_dir = os.path.dirname(__file__)
+config_file = os.path.join(this_dir, 'excitation_freq.ini')
+config = configparser.ConfigParser()
+config.read(config_file)
+
+DATA_DIR = config['FRF']['DATA_DIR']
+CURVE_NUM_EACH_PLOT = eval(config['FRF']['CURVE_NUM_EACH_PLOT'])
+TIME_RANGE = eval(config['FRF']['TIME_RANGE'])
 
 
 class Curve:
