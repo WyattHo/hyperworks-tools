@@ -7,11 +7,14 @@ import matplotlib.pyplot as plt
 import numpy.typing as npt
 import pandas as pd
 
-OUT_PATH = 'D:/my-analysis/type-m-subassy/test/type-m-subassy-frf.out'
-TEXT_INI = 'MODAL EFFECTIVE MASS FRACTION FOR SUBCASE'
-TEXT_END = 'SUBCASE TOTAL'
+
 this_dir = os.path.dirname(__file__)
 config_file = os.path.join(this_dir, 'config.ini')
+config = configparser.ConfigParser()
+config.read(config_file)
+OUT_PATH = config['MODAL']['OUT_PATH']
+TEXT_INI = 'MODAL EFFECTIVE MASS FRACTION FOR SUBCASE'
+TEXT_END = 'SUBCASE TOTAL'
 
 Table = List[List[float]]
 
@@ -140,11 +143,10 @@ def plot_modal_and_excitation_frequencies(freqs_modal: npt.ArrayLike, freqs_exci
         colors='tab:orange', linewidth=0.8
     )
     ax.vlines(
-        x=freqs_excite, ymin=-1.0, ymax=0.0, label='excitation', 
+        x=freqs_excite, ymin=-1.0, ymax=0.0, label='excitation',
         colors='tab:green', linewidth=0.8
     )
     ax.set_ybound(lower=-1.0, upper=1.0)
-    ax.set_xlim([0, 700])
     ax.set_xlabel('frequency, Hz')
     ax.set_title('Range of frequency')
     ax.set_yticks([])
@@ -153,8 +155,6 @@ def plot_modal_and_excitation_frequencies(freqs_modal: npt.ArrayLike, freqs_exci
 
 
 def get_excitation_frequency(freqs_modal: List[float]):
-    config = configparser.ConfigParser()
-    config.read(config_file)
     freqs = []
     if 'TYPE1' in config:
         f1 = eval(config['TYPE1']['F1'])
