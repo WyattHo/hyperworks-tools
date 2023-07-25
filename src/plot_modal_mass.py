@@ -1,4 +1,4 @@
-import configparser
+import json
 import math
 import os
 from typing import List
@@ -9,10 +9,11 @@ import pandas as pd
 
 
 this_dir = os.path.dirname(__file__)
-config_file = os.path.join(this_dir, 'config.ini')
-config = configparser.ConfigParser()
-config.read(config_file)
-OUT_PATH = config['MODAL']['OUT_PATH']
+config_path = os.path.join(this_dir, 'config.json')
+with open(config_path, 'r') as f:
+    config = json.load(f)
+
+OUT_PATH = config['modal']['out_path']
 TEXT_INI = 'MODAL EFFECTIVE MASS FRACTION FOR SUBCASE'
 TEXT_END = 'SUBCASE TOTAL'
 
@@ -156,25 +157,25 @@ def plot_modal_and_excitation_frequencies(freqs_modal: npt.ArrayLike, freqs_exci
 
 def get_excitation_frequency(freqs_modal: List[float]):
     freqs = []
-    if 'TYPE1' in config:
-        f1 = eval(config['TYPE1']['F1'])
-        df = eval(config['TYPE1']['DF'])
-        ndf = eval(config['TYPE1']['NDF'])
+    if 'type1' in config['modal']:
+        f1 = config['modal']['type1']['f1']
+        df = config['modal']['type1']['df']
+        ndf = config['modal']['type1']['ndf']
         freqs += create_freqs_type1(
             f1, df, ndf
         )
-    if 'TYPE2' in config:
-        f1 = eval(config['TYPE2']['F1'])
-        f2 = eval(config['TYPE2']['F2'])
-        nf = eval(config['TYPE2']['NF'])
+    if 'type2' in config['modal']:
+        f1 = config['modal']['type2']['f1']
+        f2 = config['modal']['type2']['f2']
+        nf = config['modal']['type2']['nf']
         freqs += create_freqs_type2(
             f1, f2, nf
         )
-    if 'TYPE3' in config:
-        f1 = eval(config['TYPE3']['F1'])
-        f2 = eval(config['TYPE3']['F2'])
-        nef = eval(config['TYPE3']['NEF'])
-        cluster = eval(config['TYPE3']['CLUSTER'])
+    if 'type3' in config['modal']:
+        f1 = config['modal']['type3']['f1']
+        f2 = config['modal']['type3']['f2']
+        nef = config['modal']['type3']['nef']
+        cluster = config['modal']['type3']['cluster']
         freqs += create_freqs_type3(
             freqs_modal, f1, f2,
             nef, cluster

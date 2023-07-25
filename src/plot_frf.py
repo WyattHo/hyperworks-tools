@@ -1,5 +1,5 @@
-import configparser
 import csv
+import json
 import os
 from typing import Dict, List
 
@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 
 
 this_dir = os.path.dirname(__file__)
-config_file = os.path.join(this_dir, 'config.ini')
-config = configparser.ConfigParser()
-config.read(config_file)
+config_path = os.path.join(this_dir, 'config.json')
+with open(config_path, 'r') as f:
+    config = json.load(f)
 
-DATA_DIR = config['FRF']['DATA_DIR']
-CURVE_NUM_EACH_PLOT = eval(config['FRF']['CURVE_NUM_EACH_PLOT'])
-TIME_RANGE = eval(config['FRF']['TIME_RANGE'])
+DATA_DIR = config['frf']['data_dir']
+CURVE_NUM_EACH_PLOT = config['frf']['curve_num_each_plot']
+TIME_RANGE = config['frf']['time_range']
 
 
 class Curve:
