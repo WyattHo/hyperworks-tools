@@ -50,8 +50,10 @@ class Analysis:
             max_values.append(self.curves[curve_name].get_mag_max())
         max_values_ascending = max_values.copy()
         max_values_ascending.sort(reverse=True)
-        rank_indices = [max_values.index(
-            val) for val in max_values_ascending[:CURVE_NUM_EACH_PLOT]]
+        rank_indices = [
+            max_values.index(val) 
+            for val in max_values_ascending[:CURVE_NUM_EACH_PLOT]
+        ]
         main_curve_names = [curve_names[idx] for idx in rank_indices]
         return main_curve_names
 
@@ -83,7 +85,7 @@ def get_curves(file_path: str) -> Curves:
                 if min(TIME_RANGE) <= time <= max(TIME_RANGE):
                     curve.time.append(time)
                     curve.phase.append(float(row[field_name_phase]))
-                    curve.mag.append(1000 * float(row[field_name_mag]))
+                    curve.mag.append(1.0E+06 * float(row[field_name_mag]))
     return curves
 
 
@@ -160,7 +162,7 @@ def plot_main_curves(analyses: Analyses, analysis_name: str, main_curve_names: L
         mag = curve.mag
         ax.plot(time, mag, label=curve_name, linewidth=1.0)
     ax.set_title(analysis_name)
-    ax.set_ylabel('deformation, mm')
+    ax.set_ylabel('deformation, $\mu m$')
     ax.set_xlabel('frequency, Hz')
     ax.grid(visible=True, axis='both')
     ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
@@ -195,8 +197,10 @@ def plot_3d_distribution(analyses: Analyses, analysis_name: str, case: str):
     ax.set_ylabel('y, mm')
     ax.set_zticks([])
     ax.set_aspect('equalxy')
-    fig.colorbar(scatter, shrink=0.3, aspect=20,
-                 location='left', label='deformation, mm')
+    fig.colorbar(
+        scatter, shrink=0.3, aspect=20,
+        location='left', label='deformation, $\mu m$',
+    )
     plt.show()
 
 
