@@ -44,7 +44,7 @@ class Analysis:
         self.curves = curves
 
     
-    def fetch_main_curves(self) -> List[str]:
+    def fetch_main_curve_names(self) -> List[str]:
         curve_names = list(self.curves.keys())
         max_values = []
         for curve_name in curve_names:
@@ -151,7 +151,7 @@ def parse_fem_and_assign_coordinates(analyses: Analyses, fem_path: str = FEM_PAT
                 )
 
 
-def plot_curves(analyses: Analyses, analysis_name: str, main_curve_names: List[str]):
+def plot_main_curves(analyses: Analyses, analysis_name: str, main_curve_names: List[str]):
     fig = plt.figure(figsize=(6, 2.4), tight_layout=True)
     ax = plt.axes()
     for curve_name in main_curve_names:
@@ -171,8 +171,8 @@ def main():
     analyses = get_analyses()
     parse_fem_and_assign_coordinates(analyses)
     for analysis_name, analysis in analyses.items():
-        main_curve_names = analysis.fetch_main_curves()
-        plot_curves(analyses, analysis_name, main_curve_names)
+        main_curve_names = analysis.fetch_main_curve_names()
+        plot_main_curves(analyses, analysis_name, main_curve_names)
 
 
 if __name__ == '__main__':
