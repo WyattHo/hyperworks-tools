@@ -29,10 +29,8 @@ class Curve:
         self.phase = []
         self.mag = []
 
-
     def get_mag_max(self) -> float:
         return max(self.mag)
-
 
     def assign_coordinate(self, coordinate: Coordinate):
         self.coordinate = coordinate
@@ -45,7 +43,6 @@ class Analysis:
     def __init__(self, curves: Curves) -> None:
         self.curves = curves
 
-    
     def fetch_main_curve_names(self) -> List[str]:
         curve_names = list(self.curves.keys())
         max_values = []
@@ -53,7 +50,8 @@ class Analysis:
             max_values.append(self.curves[curve_name].get_mag_max())
         max_values_ascending = max_values.copy()
         max_values_ascending.sort(reverse=True)
-        rank_indices = [max_values.index(val) for val in max_values_ascending[:CURVE_NUM_EACH_PLOT]]
+        rank_indices = [max_values.index(
+            val) for val in max_values_ascending[:CURVE_NUM_EACH_PLOT]]
         main_curve_names = [curve_names[idx] for idx in rank_indices]
         return main_curve_names
 
@@ -116,7 +114,7 @@ def validate_coordinate(coord: str) -> float:
         return eval(f'{coefficient}E{power}')
     else:
         return eval(coord)
-        
+
 
 def parse_coordinate(line: str) -> Coordinate:
     coord_x = validate_coordinate(line[24:32]) * 1000
@@ -147,8 +145,8 @@ def parse_fem_and_assign_coordinates(analyses: Analyses, fem_path: str = FEM_PAT
             if check_node(analyses, node_key):
                 coordinate = parse_coordinate(line)
                 assign_coordinate(
-                    analyses, 
-                    node_key, 
+                    analyses,
+                    node_key,
                     coordinate
                 )
 
@@ -166,28 +164,39 @@ def plot_main_curves(analyses: Analyses, analysis_name: str, main_curve_names: L
     ax.set_xlabel('frequency, Hz')
     ax.grid(visible=True, axis='both')
     ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
-    plt.show() 
+    plt.show()
 
 
-def plot_3d_distribution(analyses: Analyses, analysis_name: str):
-    fig = plt.figure(figsize=(10, 6), tight_layout=True)
+def plot_3d_distribution(analyses: Analyses, analysis_name: str, case: str):
+    fig = plt.figure(figsize=(9, 6), tight_layout=True)
     ax = plt.axes(projection='3d')
+
+    if case == 'top':
+        elev = 90
+        zrange = [50.0, 150.0]
+    else:
+        elev = -90
+        zrange = [-50.0, 50.0]
 
     x, y, z = [], [], []
     for curve_name, curve in analyses[analysis_name].curves.items():
         coord_x, coord_y, coord_z = curve.coordinate
-        deformation_max = max(curve.mag)
-        x.append(coord_x)
-        y.append(coord_y)
-        z.append(deformation_max)
-
+        if min(zrange) < coord_z < max(zrange):
+            deformation_max = max(curve.mag)
+            x.append(coord_x)
+            y.append(coord_y)
+            z.append(deformation_max)
 
     scatter = ax.scatter(x, y, z, c=z, cmap=plt.get_cmap('jet'))
-    ax.set_title(f'{analysis_name}')
+    ax.view_init(elev=elev, azim=0, roll=0)
+    ax.set_proj_type('ortho')
+    ax.set_title(f'{analysis_name} - {case}')
     ax.set_xlabel('x, mm')
     ax.set_ylabel('y, mm')
-    ax.set_zlabel('deformation, mm')
-    fig.colorbar(scatter, shrink=0.6, aspect=20, location='left')
+    ax.set_zticks([])
+    ax.set_aspect('equalxy')
+    fig.colorbar(scatter, shrink=0.3, aspect=20,
+                 location='left', label='deformation, mm')
     plt.show()
 
 
@@ -197,7 +206,8 @@ def main():
     for analysis_name, analysis in analyses.items():
         main_curve_names = analysis.fetch_main_curve_names()
         plot_main_curves(analyses, analysis_name, main_curve_names)
-        plot_3d_distribution(analyses, analysis_name)
+        for case in ['top', 'bottom']:
+            plot_3d_distribution(analyses, analysis_name, case)
 
 
 if __name__ == '__main__':
