@@ -1,7 +1,7 @@
 import csv
 import json
 import os
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 
@@ -14,10 +14,15 @@ with open(config_path, 'r') as f:
 DATA_DIR = config['frf']['data_dir']
 CURVE_NUM_EACH_PLOT = config['frf']['curve_num_each_plot']
 TIME_RANGE = config['frf']['time_range']
+FEM_PATH = config['frf']['fem_path']
+
+
+Coordinate = Tuple[float, float, float]
 
 
 class Curve:
-    def __init__(self) -> None:
+    def __init__(self, node_idx: int) -> None:
+        self.node_idx = node_idx
         self.time = []
         self.phase = []
         self.mag = []
@@ -25,6 +30,10 @@ class Curve:
 
     def get_mag_max(self) -> float:
         return max(self.mag)
+
+
+    def assign_coordinate(self, coordinate: Coordinate):
+        self.coordinate = coordinate
 
 
 Curves = Dict[str, Curve]
@@ -56,7 +65,8 @@ def initial_curves(fieldnames: str) -> Curves:
         if field_name != 'Time':
             curve_name = field_name.split('-')[0]
             if curve_name not in curves:
-                curves[curve_name] = Curve()
+                node_idx = eval(curve_name.strip('N'))
+                curves[curve_name] = Curve(node_idx)
     return curves
 
 
@@ -105,11 +115,65 @@ def plot_curves(analyses: Analyses, analysis_name: str, main_curve_names: List[s
     plt.show() 
 
 
+def validate_coordinate(coord: str) -> float:
+    sci_notation = False
+    if coord.startswith('-'):
+        if '-' in coord[1:]:
+            sci_notation = True
+    else:
+        if '-' in coord:
+            sci_notation = True
+    if sci_notation:
+        idx = coord.rindex('-')
+        coefficient = coord[:idx]
+        power = coord[idx:]
+        return eval(f'{coefficient}E{power}')
+    else:
+        return eval(coord)
+        
+
+def parse_coordinate(line: str) -> Coordinate:
+    coord_x = validate_coordinate(line[24:32])
+    coord_y = validate_coordinate(line[32:40])
+    coord_z = validate_coordinate(line[40:48])
+    return (coord_x, coord_y, coord_z)
+
+
+def check_node(analyses: Analyses, node_key: str):
+    for analysis in analyses.values():
+        if node_key in analysis.curves.keys():
+            return True
+    return False
+
+
+def assign_coordinate(analyses: Analyses, node_key: str, coordinate: Coordinate):
+    for analysis in analyses.values():
+        analysis.curves[node_key].assign_coordinate(coordinate)
+
+
+def parse_fem_and_assign_coordinates(analyses: Analyses, fem_path: str = FEM_PATH):
+    with open(fem_path, 'r') as f:
+        lines = f.readlines()
+    for line in lines:
+        if line.startswith('GRID'):
+            node_idx = eval(line[8:16])
+            node_key = f'N{node_idx:d}'
+            if check_node(analyses, node_key):
+                coordinate = parse_coordinate(line)
+                assign_coordinate(
+                    analyses, 
+                    node_key, 
+                    coordinate
+                )
+
+
 def main():
     analyses = get_analyses()
+    parse_fem_and_assign_coordinates(analyses)
     for analysis_name, analysis in analyses.items():
         main_curve_names = analysis.fetch_main_curves()
         plot_curves(analyses, analysis_name, main_curve_names)
+
 
 if __name__ == '__main__':
     main()
