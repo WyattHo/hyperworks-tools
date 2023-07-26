@@ -4,6 +4,8 @@ import os
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
+from matplotlib import cm
+from mpl_toolkits import mplot3d
 
 
 this_dir = os.path.dirname(__file__)
@@ -117,9 +119,9 @@ def validate_coordinate(coord: str) -> float:
         
 
 def parse_coordinate(line: str) -> Coordinate:
-    coord_x = validate_coordinate(line[24:32])
-    coord_y = validate_coordinate(line[32:40])
-    coord_z = validate_coordinate(line[40:48])
+    coord_x = validate_coordinate(line[24:32]) * 1000
+    coord_y = validate_coordinate(line[32:40]) * 1000
+    coord_z = validate_coordinate(line[40:48]) * 1000
     return (coord_x, coord_y, coord_z)
 
 
@@ -167,12 +169,35 @@ def plot_main_curves(analyses: Analyses, analysis_name: str, main_curve_names: L
     plt.show() 
 
 
+def plot_3d_distribution(analyses: Analyses, analysis_name: str):
+    fig = plt.figure(figsize=(10, 6), tight_layout=True)
+    ax = plt.axes(projection='3d')
+
+    x, y, z = [], [], []
+    for curve_name, curve in analyses[analysis_name].curves.items():
+        coord_x, coord_y, coord_z = curve.coordinate
+        deformation_max = max(curve.mag)
+        x.append(coord_x)
+        y.append(coord_y)
+        z.append(deformation_max)
+
+
+    scatter = ax.scatter(x, y, z, c=z, cmap=plt.get_cmap('jet'))
+    ax.set_title(f'{analysis_name}')
+    ax.set_xlabel('x, mm')
+    ax.set_ylabel('y, mm')
+    ax.set_zlabel('deformation, mm')
+    fig.colorbar(scatter, shrink=0.6, aspect=20, location='left')
+    plt.show()
+
+
 def main():
     analyses = get_analyses()
     parse_fem_and_assign_coordinates(analyses)
     for analysis_name, analysis in analyses.items():
         main_curve_names = analysis.fetch_main_curve_names()
         plot_main_curves(analyses, analysis_name, main_curve_names)
+        plot_3d_distribution(analyses, analysis_name)
 
 
 if __name__ == '__main__':
