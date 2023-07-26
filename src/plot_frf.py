@@ -99,22 +99,6 @@ def get_analyses() -> Analyses:
     return analyses
 
 
-def plot_curves(analyses: Analyses, analysis_name: str, main_curve_names: List[str]):
-    fig = plt.figure(figsize=(6, 2.4), tight_layout=True)
-    ax = plt.axes()
-    for curve_name in main_curve_names:
-        curve = analyses[analysis_name].curves[curve_name]
-        time = curve.time
-        mag = curve.mag
-        ax.plot(time, mag, label=curve_name, linewidth=1.0)
-    ax.set_title(analysis_name)
-    ax.set_ylabel('deformation, mm')
-    ax.set_xlabel('frequency, Hz')
-    ax.grid(visible=True, axis='both')
-    ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
-    plt.show() 
-
-
 def validate_coordinate(coord: str) -> float:
     sci_notation = False
     if coord.startswith('-'):
@@ -165,6 +149,22 @@ def parse_fem_and_assign_coordinates(analyses: Analyses, fem_path: str = FEM_PAT
                     node_key, 
                     coordinate
                 )
+
+
+def plot_curves(analyses: Analyses, analysis_name: str, main_curve_names: List[str]):
+    fig = plt.figure(figsize=(6, 2.4), tight_layout=True)
+    ax = plt.axes()
+    for curve_name in main_curve_names:
+        curve = analyses[analysis_name].curves[curve_name]
+        time = curve.time
+        mag = curve.mag
+        ax.plot(time, mag, label=curve_name, linewidth=1.0)
+    ax.set_title(analysis_name)
+    ax.set_ylabel('deformation, mm')
+    ax.set_xlabel('frequency, Hz')
+    ax.grid(visible=True, axis='both')
+    ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    plt.show() 
 
 
 def main():
