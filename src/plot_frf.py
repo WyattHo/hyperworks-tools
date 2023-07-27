@@ -169,37 +169,40 @@ def plot_main_curves(analyses: Analyses, analysis_name: str, main_curve_names: L
     plt.show()
 
 
-def plot_3d_distribution(analyses: Analyses, analysis_name: str, case: str):
-    fig = plt.figure(figsize=(9, 6), tight_layout=True)
-    ax = plt.axes(projection='3d')
+def plot_distribution(analyses: Analyses, analysis_name: str, case: str):
+    fig = plt.figure(figsize=(6, 4), tight_layout=True)
+    ax = plt.axes()
 
     if case == 'top':
-        elev = 90
         zrange = [50.0, 150.0]
     else:
-        elev = -90
         zrange = [-50.0, 50.0]
 
     x, y, z = [], [], []
-    for curve_name, curve in analyses[analysis_name].curves.items():
+    for curve in analyses[analysis_name].curves.values():
         coord_x, coord_y, coord_z = curve.coordinate
         if min(zrange) < coord_z < max(zrange):
             deformation_max = max(curve.mag)
-            x.append(coord_x)
-            y.append(coord_y)
+            x.append(coord_y)
+            y.append(coord_x)
             z.append(deformation_max)
-
-    scatter = ax.scatter(x, y, z, c=z, cmap=plt.get_cmap('jet'))
-    ax.view_init(elev=elev, azim=0, roll=0)
-    ax.set_proj_type('ortho')
-    ax.set_title(f'{analysis_name} - {case}')
-    ax.set_xlabel('x, mm')
-    ax.set_ylabel('y, mm')
-    ax.set_zticks([])
-    ax.set_aspect('equalxy')
+    
+    scatter = ax.scatter(x, y, c=z, cmap=plt.get_cmap('OrRd'))
+    ax.set_xlabel('y, mm')
+    ax.set_ylabel('x, mm')
+    ax.set_aspect('equal')
+    if case == 'top':
+        ax.invert_yaxis()
+        img = plt.imread(config['frf']['top_view'])
+        ax.imshow(img, extent=[-2, 359, 171, -79])
+    else:
+        img = plt.imread(config['frf']['bottom_view'])
+        ax.imshow(img, extent=[-2, 359, -79, 171])
+        
     fig.colorbar(
-        scatter, shrink=0.3, aspect=20,
+        scatter, shrink=0.6, aspect=20,
         location='left', label='deformation, $\mu m$',
+        pad=0.15
     )
     plt.show()
 
@@ -211,8 +214,8 @@ def main():
         main_curve_names = analysis.fetch_main_curve_names()
         plot_main_curves(analyses, analysis_name, main_curve_names)
         for case in ['top', 'bottom']:
-            plot_3d_distribution(analyses, analysis_name, case)
+            plot_distribution(analyses, analysis_name, case)
 
 
 if __name__ == '__main__':
-    main()
+    main()    
