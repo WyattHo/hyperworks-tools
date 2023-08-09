@@ -32,3 +32,15 @@ foreach subcase $subcases {
         puts $max_stress
     }
 }
+
+
+# cleanup handles to avoid leaks and handle name collisions
+measure ReleaseHandle
+contour ReleaseHandle
+result ReleaseHandle
+model ReleaseHandle
+client ReleaseHandle
+window ReleaseHandle
+page ReleaseHandle
+project ReleaseHandle
+session ReleaseHandle
