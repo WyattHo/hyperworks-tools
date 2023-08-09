@@ -16,6 +16,15 @@ contour SetAverageMode advanced
 contour SetEnableState True
 
 
+# specify the components in contour
+set set_idx [model AddSelectionSet element]
+model GetSelectionSetHandle selectionset $set_idx
+selectionset Add "component 1"
+selectionset Add "component 2"
+selectionset Add "component 3"
+contour SetSelectionSet $set_idx
+
+
 # iterate simulations
 client GetMeasureHandle measure 1
 set subcases [result GetSubcaseList "Base"]
@@ -37,6 +46,7 @@ foreach subcase $subcases {
 # cleanup handles to avoid leaks and handle name collisions
 measure ReleaseHandle
 contour ReleaseHandle
+selectionset ReleaseHandle
 result ReleaseHandle
 model ReleaseHandle
 client ReleaseHandle
