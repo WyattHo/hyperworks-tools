@@ -1,35 +1,3 @@
-# get contour-control handle
-hwi GetSessionHandle session
-session GetProjectHandle project
-project GetPageHandle page [project GetActivePage]
-page GetWindowHandle window [page GetActiveWindow]
-window GetClientHandle client
-client GetModelHandle model [client GetActiveModel]
-model GetResultCtrlHandle result
-result GetContourCtrlHandle contour
-
-
-# contour settings
-contour SetDataType "Element Stresses (2D & 3D)"
-contour SetDataComponent component vonMises
-contour SetAverageMode advanced
-contour SetEnableState True
-
-
-# specify the components in contour
-set set_idx [model AddSelectionSet element]
-model GetSelectionSetHandle selectionset $set_idx
-selectionset Add "component 1"
-selectionset Add "component 2"
-selectionset Add "component 3"
-contour SetSelectionSet $set_idx
-
-
-# iterate simulations
-client GetMeasureHandle measure 1
-page GetAnimatorHandle animator
-
-
 proc get_prename_of_csv {} {
     set filepath [model GetFileName]
     set idx_str [expr [string last "\\" $filepath] + 1]
@@ -67,20 +35,12 @@ proc get_maximum_stress_and_save_data {simu_label csv} {
 }
 
 
-set loop_inc 15
-set subcases [result GetSubcaseList "Base"]
-set prename [get_prename_of_csv]
-
-foreach subcase $subcases {
-    result SetCurrentSubcase $subcase
-    set csv [initial_csv $prename $subcase]
-
+proc process_subcase {subcase loop_inc csv} {
     set simu_num [llength [result GetSimulationList $subcase]]
     for {set simu_idx 0} {$simu_idx < $simu_num} {incr simu_idx} {
         result SetCurrentSimulation $simu_idx
         hwc animate mode modal
         hwc animate modal increment $loop_inc
-        
         set simu_label [result GetSimulationLabel $subcase $simu_idx]
         if {[string match Time* $simu_label]} {
             break
@@ -88,6 +48,46 @@ foreach subcase $subcases {
         iter_frames $loop_inc
         get_maximum_stress_and_save_data $simu_label $csv
     }
+}
+
+
+# get contour-control handle
+hwi GetSessionHandle session
+session GetProjectHandle project
+project GetPageHandle page [project GetActivePage]
+page GetWindowHandle window [page GetActiveWindow]
+window GetClientHandle client
+client GetModelHandle model [client GetActiveModel]
+model GetResultCtrlHandle result
+result GetContourCtrlHandle contour
+
+
+# contour settings
+contour SetDataType "Element Stresses (2D & 3D)"
+contour SetDataComponent component vonMises
+contour SetAverageMode advanced
+contour SetEnableState True
+
+
+# specify the components in contour
+set set_idx [model AddSelectionSet element]
+model GetSelectionSetHandle selectionset $set_idx
+selectionset Add "component 1"
+selectionset Add "component 2"
+selectionset Add "component 3"
+contour SetSelectionSet $set_idx
+
+
+# iterate simulations
+client GetMeasureHandle measure 1
+page GetAnimatorHandle animator
+set loop_inc 1
+set subcases [result GetSubcaseList "Base"]
+set prename [get_prename_of_csv]
+foreach subcase $subcases {
+    result SetCurrentSubcase $subcase
+    set csv [initial_csv $prename $subcase]
+    process_subcase $subcase $loop_inc $csv
     close $csv
 }
 
