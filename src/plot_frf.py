@@ -4,8 +4,6 @@ import os
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
-from matplotlib import cm
-from mpl_toolkits import mplot3d
 
 
 this_dir = os.path.dirname(__file__)
