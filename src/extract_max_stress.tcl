@@ -25,6 +25,9 @@ selectionset Add "component 3"
 contour SetSelectionSet $set_idx
 
 
+set fp [open "maximum_stress.csv" w+]
+puts $fp "subcase,frequency,max_stress"
+
 # iterate simulations
 set loop_inc 30
 client GetMeasureHandle measure 1
@@ -38,6 +41,16 @@ foreach subcase $subcases {
         set end_frame [animator GetEndFrame]
         hwc animate mode modal
         hwc animate modal increment $loop_inc
+        
+        set simu_label [result GetSimulationLabel $subcase $simu_idx]
+        if {[string match Time* $simu_label]} {
+            animator ReleaseHandle
+            break
+        }
+        
+        set idx_str [expr [string first = $simu_label] + 2]
+        set frequency [string range $simu_label $idx_str end]
+
         for {set frame_idx 0} {$frame_idx < $end_frame} {incr frame_idx} {
             set angle [expr $frame_idx * $loop_inc]
             if {$angle > 180} {
@@ -46,11 +59,12 @@ foreach subcase $subcases {
             hwc animate frame [expr $frame_idx + 1]
         }
         set max_stress [measure GetMaximum scalar]
-        puts "subcase: $subcase, simu_idx: $simu_idx, max_stress: $max_stress"
+        puts $fp "$subcase,$frequency,$max_stress"
         animator ReleaseHandle
     }
 }
 
+close $fp
 
 # cleanup handles to avoid leaks and handle name collisions
 measure ReleaseHandle
