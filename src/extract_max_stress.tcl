@@ -25,32 +25,36 @@ selectionset Add "component 3"
 contour SetSelectionSet $set_idx
 
 
-set fp [open "maximum_stress.csv" w+]
-puts $fp "subcase,frequency,max_stress"
-
 # iterate simulations
-set loop_inc 30
 client GetMeasureHandle measure 1
+page GetAnimatorHandle animator
+
+set filepath [model GetFileName]
+set idx_str [expr [string last "\\" $filepath] + 1]
+set idx_end [expr [string length $filepath]-5]
+set filenamepre [string range $filepath $idx_str $idx_end]
+set filenamemid "_maximum_stress_subcase"
+set loop_inc 30
 set subcases [result GetSubcaseList "Base"]
 foreach subcase $subcases {
     result SetCurrentSubcase $subcase
+    set fp [open "$filenamepre$filenamemid$subcase.csv" w+]
+    puts $fp "frequency,max_stress"
+
     set simu_num [llength [result GetSimulationList $subcase]]
     for {set simu_idx 0} {$simu_idx < $simu_num} {incr simu_idx} {
         result SetCurrentSimulation $simu_idx
-        page GetAnimatorHandle animator
-        set end_frame [animator GetEndFrame]
         hwc animate mode modal
         hwc animate modal increment $loop_inc
         
         set simu_label [result GetSimulationLabel $subcase $simu_idx]
         if {[string match Time* $simu_label]} {
-            animator ReleaseHandle
             break
         }
         
         set idx_str [expr [string first = $simu_label] + 2]
         set frequency [string range $simu_label $idx_str end]
-
+        set end_frame [animator GetEndFrame]
         for {set frame_idx 0} {$frame_idx < $end_frame} {incr frame_idx} {
             set angle [expr $frame_idx * $loop_inc]
             if {$angle > 180} {
@@ -59,14 +63,14 @@ foreach subcase $subcases {
             hwc animate frame [expr $frame_idx + 1]
         }
         set max_stress [measure GetMaximum scalar]
-        puts $fp "$subcase,$frequency,$max_stress"
-        animator ReleaseHandle
+        puts $fp "$frequency,$max_stress"
     }
+    close $fp
 }
 
-close $fp
 
 # cleanup handles to avoid leaks and handle name collisions
+animator ReleaseHandle
 measure ReleaseHandle
 contour ReleaseHandle
 selectionset ReleaseHandle
