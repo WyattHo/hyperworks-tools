@@ -26,19 +26,28 @@ contour SetSelectionSet $set_idx
 
 
 # iterate simulations
+set loop_inc 30
 client GetMeasureHandle measure 1
 set subcases [result GetSubcaseList "Base"]
 foreach subcase $subcases {
     result SetCurrentSubcase $subcase
-    puts "subcase: $subcase"
-
     set simu_num [llength [result GetSimulationList $subcase]]
     for {set simu_idx 0} {$simu_idx < $simu_num} {incr simu_idx} {
         result SetCurrentSimulation $simu_idx
-
-        client Draw
+        page GetAnimatorHandle animator
+        set end_frame [animator GetEndFrame]
+        hwc animate mode modal
+        hwc animate modal increment $loop_inc
+        for {set frame_idx 0} {$frame_idx < $end_frame} {incr frame_idx} {
+            set angle [expr $frame_idx * $loop_inc]
+            if {$angle > 180} {
+                break
+            }
+            hwc animate frame [expr $frame_idx + 1]
+        }
         set max_stress [measure GetMaximum scalar]
-        puts $max_stress
+        puts "subcase: $subcase, simu_idx: $simu_idx, max_stress: $max_stress"
+        animator ReleaseHandle
     }
 }
 
