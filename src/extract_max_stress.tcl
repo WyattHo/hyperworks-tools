@@ -73,6 +73,7 @@ contour SetDataType "Element Stresses (2D & 3D)"
 contour SetDataComponent component vonMises
 contour SetAverageMode advanced
 contour SetEnableState True
+contour SetShellLayer max
 
 
 # specify the components in contour
