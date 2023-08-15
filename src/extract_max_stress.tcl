@@ -15,18 +15,6 @@ proc initial_csv {prename subcase_idx} {
 }
 
 
-proc iter_frames {loop_inc} {
-    set end_frame [animator GetEndFrame]
-    for {set frame_idx 0} {$frame_idx < $end_frame} {incr frame_idx} {
-        set angle [expr $frame_idx * $loop_inc]
-        if {$angle > 180} {
-            break
-        }
-        hwc animate frame [expr $frame_idx + 1]
-    }
-}
-
-
 proc get_maximum_stress_and_save_data {simu_label csv} {
     set max_stress [measure GetMaximum scalar]
     set idx_str [expr [string first = $simu_label] + 2]
@@ -35,17 +23,15 @@ proc get_maximum_stress_and_save_data {simu_label csv} {
 }
 
 
-proc process_subcase {subcase_idx loop_inc csv} {
+proc process_subcase {subcase_idx csv} {
     set simu_num [llength [result GetSimulationList $subcase_idx]]
     for {set simu_idx 0} {$simu_idx < $simu_num} {incr simu_idx} {
         result SetCurrentSimulation $simu_idx
-        hwc animate mode modal
-        hwc animate modal increment $loop_inc
+        hwc animate mode static
         set simu_label [result GetSimulationLabel $subcase_idx $simu_idx]
         if {[string match Time* $simu_label]} {
             break
         }
-        iter_frames $loop_inc
         get_maximum_stress_and_save_data $simu_label $csv
     }
 }
@@ -54,7 +40,6 @@ proc process_subcase {subcase_idx loop_inc csv} {
 # configurations
 set component_indices "1 2 4 5 6 68 69"
 set subcase_indices "2 3 4"
-set loop_inc 1
 
 
 # get contour-control handle
@@ -92,7 +77,7 @@ set prename [get_prename_of_csv]
 foreach subcase_idx $subcase_indices {
     result SetCurrentSubcase $subcase_idx
     set csv [initial_csv $prename $subcase_idx]
-    process_subcase $subcase_idx $loop_inc $csv
+    process_subcase $subcase_idx $csv
     close $csv
 }
 
