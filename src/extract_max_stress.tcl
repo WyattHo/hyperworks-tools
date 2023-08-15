@@ -8,8 +8,8 @@ proc get_prename_of_csv {} {
 }
 
 
-proc initial_csv {prename subcase} {
-    set csv [open "$prename$subcase.csv" w+]
+proc initial_csv {prename subcase_idx} {
+    set csv [open "$prename$subcase_idx.csv" w+]
     puts $csv "frequency,max_stress"
     return $csv
 }
@@ -35,13 +35,13 @@ proc get_maximum_stress_and_save_data {simu_label csv} {
 }
 
 
-proc process_subcase {subcase loop_inc csv} {
-    set simu_num [llength [result GetSimulationList $subcase]]
+proc process_subcase {subcase_idx loop_inc csv} {
+    set simu_num [llength [result GetSimulationList $subcase_idx]]
     for {set simu_idx 0} {$simu_idx < $simu_num} {incr simu_idx} {
         result SetCurrentSimulation $simu_idx
         hwc animate mode modal
         hwc animate modal increment $loop_inc
-        set simu_label [result GetSimulationLabel $subcase $simu_idx]
+        set simu_label [result GetSimulationLabel $subcase_idx $simu_idx]
         if {[string match Time* $simu_label]} {
             break
         }
@@ -49,6 +49,12 @@ proc process_subcase {subcase loop_inc csv} {
         get_maximum_stress_and_save_data $simu_label $csv
     }
 }
+
+
+# configurations
+set component_indices "1 2 4 5 6 68 69"
+set subcase_indices "2 3 4"
+set loop_inc 1
 
 
 # get contour-control handle
@@ -72,22 +78,20 @@ contour SetEnableState True
 # specify the components in contour
 set set_idx [model AddSelectionSet element]
 model GetSelectionSetHandle selectionset $set_idx
-selectionset Add "component 1"
-selectionset Add "component 2"
-selectionset Add "component 3"
+foreach component_idx $component_indices {
+    selectionset Add "component $component_idx"
+}
 contour SetSelectionSet $set_idx
 
 
 # iterate simulations
 client GetMeasureHandle measure 1
 page GetAnimatorHandle animator
-set loop_inc 1
-set subcases [result GetSubcaseList "Base"]
 set prename [get_prename_of_csv]
-foreach subcase $subcases {
-    result SetCurrentSubcase $subcase
-    set csv [initial_csv $prename $subcase]
-    process_subcase $subcase $loop_inc $csv
+foreach subcase_idx $subcase_indices {
+    result SetCurrentSubcase $subcase_idx
+    set csv [initial_csv $prename $subcase_idx]
+    process_subcase $subcase_idx $loop_inc $csv
     close $csv
 }
 
