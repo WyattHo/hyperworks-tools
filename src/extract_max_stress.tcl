@@ -28,6 +28,7 @@ proc process_subcase {subcase_idx csv} {
     for {set simu_idx 0} {$simu_idx < $simu_num} {incr simu_idx} {
         result SetCurrentSimulation $simu_idx
         hwc animate mode static
+        # hwc animate mode transient
         set simu_label [result GetSimulationLabel $subcase_idx $simu_idx]
         if {[string match Time* $simu_label]} {
             break
@@ -51,6 +52,7 @@ window GetClientHandle client
 client GetModelHandle model [client GetActiveModel]
 model GetResultCtrlHandle result
 result GetContourCtrlHandle contour
+contour GetLegendHandle legend
 
 
 # contour settings
@@ -59,6 +61,7 @@ contour SetDataComponent component vonMises
 contour SetAverageMode advanced
 contour SetEnableState True
 contour SetShellLayer max
+hwc scale deformed resulttype=Displacement value=1.0
 
 
 # specify the components in contour
@@ -68,6 +71,17 @@ foreach component_idx $component_indices {
     selectionset Add "component $component_idx"
 }
 contour SetSelectionSet $set_idx
+
+
+# legend settings
+hwc show legends
+legend SetType dynamic
+hwc result scalar legend layout format=fixed
+hwc result scalar legend layout precision=1
+hwc result scalar legend values maximum=false
+hwc result scalar legend values minimum=false
+hwc result scalar legend values localmaximum=false
+hwc result scalar legend values localminimum=false
 
 
 # iterate simulations
@@ -85,6 +99,7 @@ foreach subcase_idx $subcase_indices {
 # cleanup handles to avoid leaks and handle name collisions
 animator ReleaseHandle
 measure ReleaseHandle
+legend ReleaseHandle
 contour ReleaseHandle
 selectionset ReleaseHandle
 result ReleaseHandle
