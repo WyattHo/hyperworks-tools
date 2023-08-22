@@ -28,7 +28,6 @@ proc process_subcase {subcase_idx csv} {
     for {set simu_idx 0} {$simu_idx < $simu_num} {incr simu_idx} {
         result SetCurrentSimulation $simu_idx
         hwc animate mode static
-        # hwc animate mode transient
         set simu_label [result GetSimulationLabel $subcase_idx $simu_idx]
         if {[string match Time* $simu_label]} {
             break
@@ -41,6 +40,9 @@ proc process_subcase {subcase_idx csv} {
 # configurations
 set component_indices "1 2 4 5 6 68 69"
 set subcase_indices "2 3 4"
+set legend_format fixed
+set legend_precision 1
+set deform_scale 1.0
 
 
 # get contour-control handle
@@ -61,7 +63,7 @@ contour SetDataComponent component vonMises
 contour SetAverageMode advanced
 contour SetEnableState True
 contour SetShellLayer max
-hwc scale deformed resulttype=Displacement value=1.0
+hwc scale deformed resulttype=Displacement value=$deform_scale
 
 
 # specify the components in contour
@@ -76,8 +78,8 @@ contour SetSelectionSet $set_idx
 # legend settings
 hwc show legends
 legend SetType dynamic
-hwc result scalar legend layout format=fixed
-hwc result scalar legend layout precision=1
+hwc result scalar legend layout format=$legend_format
+hwc result scalar legend layout precision=$legend_precision
 hwc result scalar legend values maximum=false
 hwc result scalar legend values minimum=false
 hwc result scalar legend values localmaximum=false
