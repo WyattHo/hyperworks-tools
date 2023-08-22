@@ -5,6 +5,9 @@ set hotspot_label "Hotspot Query 1"
 set num_hotspot 2
 set lower_value 0
 set component_indices "1 2 4 5 6 7"
+set legend_format fixed
+set legend_precision 1
+set deform_scale 1.0
 
 
 # show target components only
@@ -17,8 +20,15 @@ foreach idx $component_indices {
 # initial
 hwc animate mode static
 hwc result scalar clear
-hwc result scalar load type=$result_type filtermode=none filtervalue=20;  # filtervalue is required. wtf..
+hwc result scalar load type=$result_type filtermode=none filtervalue=20 avgmode=advanced;  # filtervalue is necessary. wtf..
 hwc kpi hotspot clear
+
+
+# legend settings
+hwc result scalar legend layout format=$legend_format
+hwc result scalar legend layout precision=$legend_precision
+hwc result scalar legend values maximum=false
+hwc result scalar legend values minimum=false
 
 
 # hotspot settings
@@ -38,3 +48,8 @@ hwc hide component all
 foreach idx $component_indices {
     hwc show component $idx
 }
+
+
+# misc. settings
+hwc scale deformed resulttype=Displacement value=$deform_scale
+hwc hide note "Model Info"
