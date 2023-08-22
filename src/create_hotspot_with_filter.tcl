@@ -16,7 +16,8 @@ foreach idx $component_indices {
 
 # initial
 hwc animate mode static
-hwc result scalar load type=$result_type
+hwc result scalar clear
+hwc result scalar load type=$result_type filtermode=none filtervalue=20;  # filtervalue is required. wtf..
 hwc kpi hotspot clear
 
 
@@ -30,3 +31,10 @@ hwc kpi hotspot $hotspot_label findhotspots
 hwc result scalar load type=$result_type filtermode=below filtervalue=$filter_value
 hwc kpi hotspot $hotspot_label findhotspots
 hwc kpi hotspot $hotspot_label review
+
+
+# show target components only
+hwc hide component all
+foreach idx $component_indices {
+    hwc show component $idx
+}
