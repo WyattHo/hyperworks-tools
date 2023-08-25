@@ -21,6 +21,7 @@ foreach idx $component_indices {
 hwc animate mode static
 hwc result scalar clear
 hwc result scalar load type=$result_type filtermode=none filtervalue=20 avgmode=advanced;  # filtervalue is necessary. wtf..
+hwc result scalar load type=$result_type displayed=true
 hwc kpi hotspot clear
 
 
