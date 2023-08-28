@@ -23,14 +23,37 @@ proc get_maximum_stress_and_save_data {simu_label csv} {
 }
 
 
-proc iterate_angle {angle_inc} {
+proc retrieve_node_stress {node_idx} {
+    # get handle
+    model GetQueryCtrlHandle query
+
+    # selection
+    set nodeset_idx [model AddSelectionSet node]
+    model GetSelectionSetHandle nodeset $nodeset_idx
+    nodeset Add "id $node_idx"
+
+    # guery
+    query SetSelectionSet $nodeset_idx
+    query SetQuery "node.id contour.value"
+    query GetIteratorHandle iterator
+    set data [iterator GetDataList]
+    puts $data
+
+    iterator ReleaseHandle
+    nodeset ReleaseHandle
+    query ReleaseHandle
+}
+
+
+proc iterate_angle {angle_inc node_idx} {
     hwc animate mode modal
     hwc animate modal increment $angle_inc
     hwc animate frame 1
 
     set angle 0
-    set angle_end [expr {60 - $angle_inc}]
+    set angle_end [expr {40 - $angle_inc}]
     while {True} {
+        retrieve_node_stress $node_idx
         hwc animate next
         set angle [expr {$angle + $angle_inc}]
         if {$angle >= $angle_end} {
@@ -58,8 +81,6 @@ client GetModelHandle model [client GetActiveModel]
 model GetResultCtrlHandle result
 result GetContourCtrlHandle contour
 contour GetLegendHandle legend
-# page GetAnimatorHandle animator
-# client GetMeasureHandle measure 1
 
 
 # contour settings
@@ -83,32 +104,10 @@ hwc result scalar legend values localminimum=false
 
 
 # iterate simulations
-iterate_angle $angle_inc
-
-
-# get handle
-model GetQueryCtrlHandle query
-
-# selection
-set nodeset_idx [model AddSelectionSet node]
-model GetSelectionSetHandle nodeset $nodeset_idx
-nodeset Add "id $node_idx"
-
-# guery
-query SetSelectionSet $nodeset_idx
-query SetQuery "node.id contour.value"
-query GetIteratorHandle iterator
-set data [iterator GetDataList]
-puts $data
-
-iterator ReleaseHandle
-nodeset ReleaseHandle
-query ReleaseHandle
+iterate_angle $angle_inc $node_idx
 
 
 # cleanup handles to avoid leaks and handle name collisions
-# animator ReleaseHandle
-# measure ReleaseHandle
 legend ReleaseHandle
 contour ReleaseHandle
 result ReleaseHandle
