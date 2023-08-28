@@ -1,25 +1,12 @@
-proc get_prename_of_csv {} {
+proc initial_csv {node_idx} {
     set filepath [model GetFileName]
     set idx_str [expr [string last "\\" $filepath] + 1]
     set idx_end [expr [string length $filepath] - 5]
-    set filename_a [string range $filepath $idx_str $idx_end]
-    set filename_b "cyclic_stress"
-    return "$filename_a$filename_b"
-}
-
-
-proc initial_csv {prename subcase_idx} {
-    set csv [open "$prename$subcase_idx.csv" w+]
+    set prename [string range $filepath $idx_str $idx_end]
+    set filename "$prename\_N$node_idx"
+    set csv [open "$filename.csv" w+]
     puts $csv "angle,stress"
     return $csv
-}
-
-
-proc get_maximum_stress_and_save_data {simu_label csv} {
-    set max_stress [measure GetMaximum scalar]
-    set idx_str [expr [string first = $simu_label] + 2]
-    set frequency [string range $simu_label $idx_str end]
-    puts $csv "$frequency,$max_stress"
 }
 
 
@@ -34,14 +21,16 @@ proc retrieve_node_stress {node_idx} {
 
     # guery
     query SetSelectionSet $nodeset_idx
-    query SetQuery "node.id contour.value"
+    query SetQuery "contour.value"
     query GetIteratorHandle iterator
     set data [iterator GetDataList]
-    puts $data
 
+    # release handle
     iterator ReleaseHandle
     nodeset ReleaseHandle
     query ReleaseHandle
+
+    return $data
 }
 
 
@@ -49,17 +38,20 @@ proc iterate_angle {angle_inc node_idx} {
     hwc animate mode modal
     hwc animate modal increment $angle_inc
     hwc animate frame 1
-
+    set csv [initial_csv $node_idx]
     set angle 0
-    set angle_end [expr {40 - $angle_inc}]
+    set angle_end [expr {360 - $angle_inc}]
     while {True} {
-        retrieve_node_stress $node_idx
+        set data [retrieve_node_stress $node_idx]
+        puts "$angle,$data"
+        puts $csv "$angle,$data"
         hwc animate next
         set angle [expr {$angle + $angle_inc}]
         if {$angle >= $angle_end} {
             break
         }
     }
+    close $csv
 }
 
 
