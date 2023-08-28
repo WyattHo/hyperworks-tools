@@ -29,7 +29,7 @@ proc iterate_angle {angle_inc} {
     hwc animate frame 1
 
     set angle 0
-    set angle_end [expr {360 - $angle_inc}]
+    set angle_end [expr {60 - $angle_inc}]
     while {True} {
         hwc animate next
         set angle [expr {$angle + $angle_inc}]
@@ -84,6 +84,26 @@ hwc result scalar legend values localminimum=false
 
 # iterate simulations
 iterate_angle $angle_inc
+
+
+# get handle
+model GetQueryCtrlHandle query
+
+# selection
+set nodeset_idx [model AddSelectionSet node]
+model GetSelectionSetHandle nodeset $nodeset_idx
+nodeset Add "id $node_idx"
+
+# guery
+query SetSelectionSet $nodeset_idx
+query SetQuery "node.id contour.value"
+query GetIteratorHandle iterator
+set data [iterator GetDataList]
+puts $data
+
+iterator ReleaseHandle
+nodeset ReleaseHandle
+query ReleaseHandle
 
 
 # cleanup handles to avoid leaks and handle name collisions
