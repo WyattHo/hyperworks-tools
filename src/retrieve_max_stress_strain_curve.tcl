@@ -3,7 +3,7 @@ proc get_prename_of_csv {} {
     set idx_str [expr [string last "\\" $filepath] + 1]
     set idx_end [expr [string length $filepath] - 5]
     set filename_a [string range $filepath $idx_str $idx_end]
-    set filename_b "_maximum_stress_subcase"
+    set filename_b "_stress_strain_curve_"
     return "$filename_a$filename_b"
 }
 
@@ -46,9 +46,6 @@ proc process_subcase {subcase_idx csv} {
 # configurations
 set component_indices "1"
 set subcase_indices "1"
-set legend_format "dynamic"
-set legend_precision 1
-set deform_scale 1.0
 
 
 # get contour-control handle
@@ -60,7 +57,6 @@ window GetClientHandle client
 client GetModelHandle model [client GetActiveModel]
 model GetResultCtrlHandle result
 result GetContourCtrlHandle contour
-contour GetLegendHandle legend
 
 
 # specify the components in contour
@@ -87,7 +83,6 @@ foreach subcase_idx $subcase_indices {
 # cleanup handles to avoid leaks and handle name collisions
 animator ReleaseHandle
 measure ReleaseHandle
-legend ReleaseHandle
 contour ReleaseHandle
 selectionset ReleaseHandle
 result ReleaseHandle
