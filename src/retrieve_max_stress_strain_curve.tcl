@@ -15,22 +15,30 @@ proc initial_csv {prename subcase_idx} {
 }
 
 
-proc get_maximum_stress_and_save_data {simu_label csv} {
+proc get_maximum_stress_strain_and_save_data {simu_label csv} {
+    # strain
+    hwc result scalar load type="Element Strains (2D & 3D)" component=ZZ avgmode=advanced system=global
+    set max_strain [measure GetMaximum scalar]
+    
+    # stress
+    hwc result scalar load type="Element Stresses (2D & 3D)" component=ZZ avgmode=advanced system=global
     set max_stress [measure GetMaximum scalar]
+
+    # save data    
     set idx_str [expr [string first = $simu_label] + 2]
     set time [string range $simu_label $idx_str end]
-    puts $csv "$time,$max_stress"
+    puts "$time,$max_strain,$max_stress"
+    puts $csv "$time,$max_strain,$max_stress"
 }
 
 
 proc process_subcase {subcase_idx csv} {
     set simu_num [llength [result GetSimulationList $subcase_idx]]
     for {set simu_idx 0} {$simu_idx < $simu_num} {incr simu_idx} {
-        puts $simu_idx
         result SetCurrentSimulation $simu_idx
         hwc animate mode static
         set simu_label [result GetSimulationLabel $subcase_idx $simu_idx]
-        get_maximum_stress_and_save_data $simu_label $csv
+        get_maximum_stress_strain_and_save_data $simu_label $csv
     }
 }
 
@@ -42,6 +50,7 @@ set legend_format "dynamic"
 set legend_precision 1
 set deform_scale 1.0
 
+
 # get contour-control handle
 hwi GetSessionHandle session
 session GetProjectHandle project
@@ -52,7 +61,6 @@ client GetModelHandle model [client GetActiveModel]
 model GetResultCtrlHandle result
 result GetContourCtrlHandle contour
 contour GetLegendHandle legend
-puts qweqwe
 
 
 # specify the components in contour
@@ -64,27 +72,11 @@ foreach component_idx $component_indices {
 contour SetSelectionSet $set_idx
 
 
-# contour settings
-hwc result scalar load type="Element Strains (2D & 3D)" component="ZZ" avgmode="advanced"
-hwc scale deformed resulttype=Displacement value=$deform_scale
-
-
-# legend settings
-hwc show legends
-hwc result scalar legend layout format=$legend_format
-hwc result scalar legend layout precision=$legend_precision
-hwc result scalar legend values maximum=false
-hwc result scalar legend values minimum=false
-hwc result scalar legend values localmaximum=false
-hwc result scalar legend values localminimum=false
-
-
 # iterate simulations
 client GetMeasureHandle measure 1
 page GetAnimatorHandle animator
 set prename [get_prename_of_csv]
 foreach subcase_idx $subcase_indices {
-    puts $subcase_idx
     result SetCurrentSubcase $subcase_idx
     set csv [initial_csv $prename $subcase_idx]
     process_subcase $subcase_idx $csv
