@@ -1,10 +1,10 @@
 # configurations
 set result_type "Element Stresses (2D & 3D)"
-set filter_value 150
+set filter_value 245;  # Aluminum: 150, Copper: 245
 set hotspot_label "Hotspot Query 1"
 set num_hotspot 4
 set lower_value 0
-set component_indices "1 2 3"
+set component_indices "17 18"
 set legend_format fixed
 set legend_precision 1
 set deform_scale 1.0
