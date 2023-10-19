@@ -1,13 +1,13 @@
 import csv
 import json
-import os
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 
 
-this_dir = os.path.dirname(__file__)
-config_path = os.path.join(this_dir, 'config.json')
+this_dir = Path(__file__).parent
+config_path = this_dir.joinpath('config.json')
 with open(config_path, 'r') as f:
     config = json.load(f)
 
@@ -89,13 +89,12 @@ def get_curves(file_path: str) -> Curves:
 
 def get_analyses() -> Analyses:
     analyses = {}
-    file_names = os.listdir(DATA_DIR)
+    file_names = Path(DATA_DIR).iterdir()
     for file_name in file_names:
-        if not file_name.endswith('.csv'):
+        if file_name.suffix != '.csv':
             continue
-        analysis_name = file_name.strip('.csv')
-        file_path = os.path.join(DATA_DIR, file_name)
-        analyses[analysis_name] = Analysis(get_curves(file_path))
+        analysis_name = file_name.stem
+        analyses[analysis_name] = Analysis(get_curves(file_name))
     return analyses
 
 

@@ -1,6 +1,6 @@
 import json
 import math
-import os
+from pathlib import Path
 from typing import List
 
 import matplotlib.pyplot as plt
@@ -8,8 +8,8 @@ import numpy.typing as npt
 import pandas as pd
 
 
-this_dir = os.path.dirname(__file__)
-config_path = os.path.join(this_dir, 'config.json')
+this_dir = Path(__file__).parent
+config_path = this_dir.joinpath('config.json')
 with open(config_path, 'r') as f:
     config = json.load(f)
 
