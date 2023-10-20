@@ -7,20 +7,20 @@ import matplotlib.pyplot as plt
 import numpy.typing as npt
 import pandas as pd
 
-
-this_dir = Path(__file__).parent
-config_path = this_dir.joinpath('config.json')
-with open(config_path, 'r') as f:
-    config = json.load(f)
-
-OUT_PATH = config['modal']['out_path']
-TEXT_INI = 'MODAL EFFECTIVE MASS FRACTION FOR SUBCASE'
-TEXT_END = 'SUBCASE TOTAL'
-
 Table = List[List[float]]
 
 
+def read_configuration(config_name: str) -> dict:
+    this_dir = Path(__file__).parent
+    config_path = this_dir.joinpath(config_name)
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    return config
+
+
 def tick_line_range(lines: List[str]) -> List[int]:
+    TEXT_INI = 'MODAL EFFECTIVE MASS FRACTION FOR SUBCASE'
+    TEXT_END = 'SUBCASE TOTAL'
     for idx, line in enumerate(lines):
         if TEXT_INI in line:
             tick_ini = idx + 5
@@ -155,7 +155,7 @@ def plot_modal_and_excitation_frequencies(freqs_modal: npt.ArrayLike, freqs_exci
     plt.show()
 
 
-def get_excitation_frequency(freqs_modal: List[float]):
+def get_excitation_frequency(freqs_modal: List[float], config: dict):
     freqs = []
     if 'type1' in config['modal']:
         f1 = config['modal']['type1']['f1']
@@ -185,12 +185,18 @@ def get_excitation_frequency(freqs_modal: List[float]):
     return freqs_excite
 
 
-def main():
-    df = fetch_modal_mass(OUT_PATH)
+def main(config_name: str = 'config_test.json'):
+    # Parse config
+    config = read_configuration(config_name)
+    out_path = config['modal']['out_path']
+
+    # Process data
+    df = fetch_modal_mass(out_path)
     freqs_modal = df['frequency']
     masses_x, masses_y, masses_z = df['mass_x'], df['mass_y'], df['mass_z']
+    freqs_excite = get_excitation_frequency(freqs_modal.to_list(), config)
 
-    freqs_excite = get_excitation_frequency(freqs_modal.to_list())
+    # Plot
     plot_mass_distribution(freqs_modal, masses_x, masses_y, masses_z)
     plot_modal_and_excitation_frequencies(freqs_modal, freqs_excite)
 
