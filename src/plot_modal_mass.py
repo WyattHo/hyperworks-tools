@@ -58,7 +58,9 @@ def fetch_modal_mass(out_path: str) -> pd.DataFrame:
     return df
 
 
-def plot_mass_distribution(freq_arr: npt.ArrayLike, mass_x_arr: npt.ArrayLike, mass_y_arr: npt.ArrayLike, mass_z_arr: npt.ArrayLike):
+def plot_mass_distribution(
+        freq_arr: npt.ArrayLike, mass_x_arr: npt.ArrayLike, mass_y_arr: npt.ArrayLike,
+        mass_z_arr: npt.ArrayLike, output_dir: Path):
     fig = plt.figure(figsize=(6, 2.1), tight_layout=True)
     ax = plt.axes()
     ax.plot(
@@ -81,7 +83,8 @@ def plot_mass_distribution(freq_arr: npt.ArrayLike, mass_x_arr: npt.ArrayLike, m
     ax.set_xlabel('frequency, Hz')
     ax.grid(visible=True, axis='both')
     ax.legend()
-    plt.show()
+    fig_name = output_dir.joinpath('modal_mass_distribution.png')
+    fig.savefig(fig_name)
 
 
 def create_freqs_type1(f1: float, df: float, ndf: int) -> List[float]:
@@ -136,7 +139,8 @@ def create_freqs_type3(modal_f_arr: List[float], f1: float, f2: float, nef: int,
     return freq3_arr
 
 
-def plot_modal_and_excitation_frequencies(freqs_modal: npt.ArrayLike, freqs_excite: npt.ArrayLike):
+def plot_modal_and_excitation_frequencies(
+        freqs_modal: npt.ArrayLike, freqs_excite: npt.ArrayLike, output_dir: Path):
     fig = plt.figure(figsize=(8, 1.6), tight_layout=True)
     ax = plt.axes()
     ax.vlines(
@@ -152,7 +156,8 @@ def plot_modal_and_excitation_frequencies(freqs_modal: npt.ArrayLike, freqs_exci
     ax.set_title('Range of frequency')
     ax.set_yticks([])
     ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
-    plt.show()
+    fig_name = output_dir.joinpath('range_of_frequency.png')
+    fig.savefig(fig_name)
 
 
 def get_excitation_frequency(freqs_modal: List[float], config: dict):
@@ -188,6 +193,7 @@ def get_excitation_frequency(freqs_modal: List[float], config: dict):
 def main(config_name: str):
     # Parse config
     config = read_configuration(config_name)
+    output_dir = Path(config['output'])
     out_path = config['modal']['out_path']
 
     # Process data
@@ -197,8 +203,13 @@ def main(config_name: str):
     freqs_excite = get_excitation_frequency(freqs_modal.to_list(), config)
 
     # Plot
-    plot_mass_distribution(freqs_modal, masses_x, masses_y, masses_z)
-    plot_modal_and_excitation_frequencies(freqs_modal, freqs_excite)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    plot_mass_distribution(
+        freqs_modal, masses_x, masses_y, masses_z, output_dir
+    )
+    plot_modal_and_excitation_frequencies(
+        freqs_modal, freqs_excite, output_dir
+    )
 
 
 if __name__ == '__main__':

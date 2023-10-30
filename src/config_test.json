@@ -1,4 +1,5 @@
 {
+    "output": "D:\\hyperworks-tools-output",
     "modal": {
         "out_path": ".\\test\\modal\\type-m-subassy-frf.out",
         "type1": {

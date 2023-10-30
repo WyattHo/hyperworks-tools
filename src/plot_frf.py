@@ -84,9 +84,9 @@ def get_curves(file_path: str, time_range: List) -> Curves:
     return curves
 
 
-def get_analyses(data_dir: str, time_range: List) -> Analyses:
+def get_analyses(data_dir: Path, time_range: List) -> Analyses:
     analyses = {}
-    file_names = Path(data_dir).iterdir()
+    file_names = data_dir.iterdir()
     for file_name in file_names:
         if file_name.suffix != '.csv':
             continue
@@ -148,7 +148,9 @@ def parse_fem_and_assign_coordinates(analyses: Analyses, fem_path: str):
                 )
 
 
-def plot_main_curves(analyses: Analyses, analysis_name: str, main_curve_names: List[str]):
+def plot_main_curves(
+        analyses: Analyses, analysis_name: str,
+        main_curve_names: List[str], output_dir: Path):
     fig = plt.figure(figsize=(6, 2.4), tight_layout=True)
     ax = plt.axes()
     for curve_name in main_curve_names:
@@ -161,13 +163,13 @@ def plot_main_curves(analyses: Analyses, analysis_name: str, main_curve_names: L
     ax.set_xlabel('frequency, Hz')
     ax.grid(visible=True, axis='both')
     ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
-    plt.show()
+    fig_name = output_dir.joinpath(f'{analysis_name}.png')
+    fig.savefig(fig_name)
 
 
 def plot_distribution(
         analyses: Analyses, analysis_name: str, case: str,
-        top_view, bottom_view):
-
+        top_view: str, bottom_view: str, output_dir: Path):
     fig = plt.figure(figsize=(6, 4), tight_layout=True)
     ax = plt.axes()
 
@@ -202,13 +204,15 @@ def plot_distribution(
         location='left', label='deformation, $\mu m$',
         pad=0.15
     )
-    plt.show()
+    fig_name = output_dir.joinpath(f'{analysis_name}_{case}.png')
+    fig.savefig(fig_name)
 
 
 def main(config_name: str):
     # Parse config
     config = read_configuration(config_name)
-    data_dir = config['frf']['data_dir']
+    output_dir = Path(config['output'])
+    data_dir = Path(config['frf']['data_dir'])
     curve_num = config['frf']['curve_num_each_plot']
     time_range = config['frf']['time_range']
     fem_path = config['frf']['fem_path']
@@ -220,13 +224,14 @@ def main(config_name: str):
     parse_fem_and_assign_coordinates(analyses, fem_path)
 
     # Plot
+    output_dir.mkdir(parents=True, exist_ok=True)
     for analysis_name, analysis in analyses.items():
         main_curve_names = analysis.fetch_main_curve_names(curve_num)
-        plot_main_curves(analyses, analysis_name, main_curve_names)
+        plot_main_curves(analyses, analysis_name, main_curve_names, output_dir)
         for case in ['top', 'bottom']:
             plot_distribution(
                 analyses, analysis_name, case,
-                top_view, bottom_view
+                top_view, bottom_view, output_dir
             )
 
 

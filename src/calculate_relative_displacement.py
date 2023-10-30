@@ -59,13 +59,13 @@ def output_csv(output_results, output_dir):
 def main(config_name: str):
     # Parse config
     config = read_configuration(config_name)
+    output_dir = Path(config['output'])
     data_dir = Path(config['rel_disp']['data_dir'])
     directions = config['rel_disp']['directions']
     node_pairs = config['rel_disp']['node_pairs']
-    csv_paths = list(data_dir.glob('*.csv'))
 
-    # Create output directory
-    output_dir = data_dir.joinpath('output')
+    # Deal with directories
+    csv_paths = list(data_dir.glob('*.csv'))
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Process data
