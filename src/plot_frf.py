@@ -1,20 +1,17 @@
 import csv
 import json
-import os
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 
 
-this_dir = os.path.dirname(__file__)
-config_path = os.path.join(this_dir, 'config.json')
-with open(config_path, 'r') as f:
-    config = json.load(f)
-
-DATA_DIR = config['frf']['data_dir']
-CURVE_NUM_EACH_PLOT = config['frf']['curve_num_each_plot']
-TIME_RANGE = config['frf']['time_range']
-FEM_PATH = config['frf']['fem_path']
+def read_configuration(config_name: str) -> dict:
+    this_dir = Path(__file__).parent
+    config_path = this_dir.joinpath(config_name)
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    return config
 
 
 Coordinate = Tuple[float, float, float]
@@ -41,7 +38,7 @@ class Analysis:
     def __init__(self, curves: Curves) -> None:
         self.curves = curves
 
-    def fetch_main_curve_names(self) -> List[str]:
+    def fetch_main_curve_names(self, curve_num: int) -> List[str]:
         curve_names = list(self.curves.keys())
         max_values = []
         for curve_name in curve_names:
@@ -49,8 +46,8 @@ class Analysis:
         max_values_ascending = max_values.copy()
         max_values_ascending.sort(reverse=True)
         rank_indices = [
-            max_values.index(val) 
-            for val in max_values_ascending[:CURVE_NUM_EACH_PLOT]
+            max_values.index(val)
+            for val in max_values_ascending[:curve_num]
         ]
         main_curve_names = [curve_names[idx] for idx in rank_indices]
         return main_curve_names
@@ -70,7 +67,7 @@ def initial_curves(fieldnames: str) -> Curves:
     return curves
 
 
-def get_curves(file_path: str) -> Curves:
+def get_curves(file_path: str, time_range: List) -> Curves:
     with open(file_path, 'r') as f:
         table = csv.DictReader(f, delimiter=',', skipinitialspace=True)
         curves = initial_curves(table.fieldnames)
@@ -80,22 +77,22 @@ def get_curves(file_path: str) -> Curves:
                 field_name_phase = '-'.join([curve_name, 'Phase'])
                 field_name_mag = '-'.join([curve_name, 'Mag'])
                 time = float(row[field_name_time])
-                if min(TIME_RANGE) <= time <= max(TIME_RANGE):
+                if min(time_range) <= time <= max(time_range):
                     curve.time.append(time)
                     curve.phase.append(float(row[field_name_phase]))
                     curve.mag.append(1.0E+06 * float(row[field_name_mag]))
     return curves
 
 
-def get_analyses() -> Analyses:
+def get_analyses(data_dir: Path, time_range: List) -> Analyses:
     analyses = {}
-    file_names = os.listdir(DATA_DIR)
+    file_names = data_dir.iterdir()
     for file_name in file_names:
-        if not file_name.endswith('.csv'):
+        if file_name.suffix != '.csv':
             continue
-        analysis_name = file_name.strip('.csv')
-        file_path = os.path.join(DATA_DIR, file_name)
-        analyses[analysis_name] = Analysis(get_curves(file_path))
+        analysis_name = file_name.stem
+        curves = get_curves(file_name, time_range)
+        analyses[analysis_name] = Analysis(curves)
     return analyses
 
 
@@ -135,7 +132,7 @@ def assign_coordinate(analyses: Analyses, node_key: str, coordinate: Coordinate)
         analysis.curves[node_key].assign_coordinate(coordinate)
 
 
-def parse_fem_and_assign_coordinates(analyses: Analyses, fem_path: str = FEM_PATH):
+def parse_fem_and_assign_coordinates(analyses: Analyses, fem_path: str):
     with open(fem_path, 'r') as f:
         lines = f.readlines()
     for line in lines:
@@ -151,7 +148,9 @@ def parse_fem_and_assign_coordinates(analyses: Analyses, fem_path: str = FEM_PAT
                 )
 
 
-def plot_main_curves(analyses: Analyses, analysis_name: str, main_curve_names: List[str]):
+def plot_main_curves(
+        analyses: Analyses, analysis_name: str,
+        main_curve_names: List[str], output_dir: Path):
     fig = plt.figure(figsize=(6, 2.4), tight_layout=True)
     ax = plt.axes()
     for curve_name in main_curve_names:
@@ -164,10 +163,13 @@ def plot_main_curves(analyses: Analyses, analysis_name: str, main_curve_names: L
     ax.set_xlabel('frequency, Hz')
     ax.grid(visible=True, axis='both')
     ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
-    plt.show()
+    fig_name = output_dir.joinpath(f'{analysis_name}.png')
+    fig.savefig(fig_name)
 
 
-def plot_distribution(analyses: Analyses, analysis_name: str, case: str):
+def plot_distribution(
+        analyses: Analyses, analysis_name: str, case: str,
+        top_view: str, bottom_view: str, output_dir: Path):
     fig = plt.figure(figsize=(6, 4), tight_layout=True)
     ax = plt.axes()
 
@@ -184,36 +186,54 @@ def plot_distribution(analyses: Analyses, analysis_name: str, case: str):
             x.append(coord_y)
             y.append(coord_x)
             z.append(deformation_max)
-    
+
     scatter = ax.scatter(x, y, c=z, cmap=plt.get_cmap('OrRd'))
     ax.set_xlabel('y, mm')
     ax.set_ylabel('x, mm')
     ax.set_aspect('equal')
     if case == 'top':
         ax.invert_yaxis()
-        img = plt.imread(config['frf']['top_view'])
+        img = plt.imread(top_view)
         ax.imshow(img, extent=[-2, 359, 171, -79])
     else:
-        img = plt.imread(config['frf']['bottom_view'])
+        img = plt.imread(bottom_view)
         ax.imshow(img, extent=[-2, 359, -79, 171])
-        
+
     fig.colorbar(
         scatter, shrink=0.6, aspect=20,
         location='left', label='deformation, $\mu m$',
         pad=0.15
     )
-    plt.show()
+    fig_name = output_dir.joinpath(f'{analysis_name}_{case}.png')
+    fig.savefig(fig_name)
 
 
-def main():
-    analyses = get_analyses()
-    parse_fem_and_assign_coordinates(analyses)
+def main(config_name: str):
+    # Parse config
+    config = read_configuration(config_name)
+    output_dir = Path(config['output'])
+    data_dir = Path(config['frf']['data_dir'])
+    curve_num = config['frf']['curve_num_each_plot']
+    time_range = config['frf']['time_range']
+    fem_path = config['frf']['fem_path']
+    top_view = config['frf']['top_view']
+    bottom_view = config['frf']['bottom_view']
+
+    # Process data
+    analyses = get_analyses(data_dir, time_range)
+    parse_fem_and_assign_coordinates(analyses, fem_path)
+
+    # Plot
+    output_dir.mkdir(parents=True, exist_ok=True)
     for analysis_name, analysis in analyses.items():
-        main_curve_names = analysis.fetch_main_curve_names()
-        plot_main_curves(analyses, analysis_name, main_curve_names)
+        main_curve_names = analysis.fetch_main_curve_names(curve_num)
+        plot_main_curves(analyses, analysis_name, main_curve_names, output_dir)
         for case in ['top', 'bottom']:
-            plot_distribution(analyses, analysis_name, case)
+            plot_distribution(
+                analyses, analysis_name, case,
+                top_view, bottom_view, output_dir
+            )
 
 
 if __name__ == '__main__':
-    main()    
+    main('config_test.json')

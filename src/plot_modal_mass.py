@@ -1,26 +1,26 @@
 import json
 import math
-import os
+from pathlib import Path
 from typing import List
 
 import matplotlib.pyplot as plt
 import numpy.typing as npt
 import pandas as pd
 
-
-this_dir = os.path.dirname(__file__)
-config_path = os.path.join(this_dir, 'config.json')
-with open(config_path, 'r') as f:
-    config = json.load(f)
-
-OUT_PATH = config['modal']['out_path']
-TEXT_INI = 'MODAL EFFECTIVE MASS FRACTION FOR SUBCASE'
-TEXT_END = 'SUBCASE TOTAL'
-
 Table = List[List[float]]
 
 
+def read_configuration(config_name: str) -> dict:
+    this_dir = Path(__file__).parent
+    config_path = this_dir.joinpath(config_name)
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    return config
+
+
 def tick_line_range(lines: List[str]) -> List[int]:
+    TEXT_INI = 'MODAL EFFECTIVE MASS FRACTION FOR SUBCASE'
+    TEXT_END = 'SUBCASE TOTAL'
     for idx, line in enumerate(lines):
         if TEXT_INI in line:
             tick_ini = idx + 5
@@ -58,7 +58,9 @@ def fetch_modal_mass(out_path: str) -> pd.DataFrame:
     return df
 
 
-def plot_mass_distribution(freq_arr: npt.ArrayLike, mass_x_arr: npt.ArrayLike, mass_y_arr: npt.ArrayLike, mass_z_arr: npt.ArrayLike):
+def plot_mass_distribution(
+        freq_arr: npt.ArrayLike, mass_x_arr: npt.ArrayLike, mass_y_arr: npt.ArrayLike,
+        mass_z_arr: npt.ArrayLike, output_dir: Path):
     fig = plt.figure(figsize=(6, 2.1), tight_layout=True)
     ax = plt.axes()
     ax.plot(
@@ -81,7 +83,8 @@ def plot_mass_distribution(freq_arr: npt.ArrayLike, mass_x_arr: npt.ArrayLike, m
     ax.set_xlabel('frequency, Hz')
     ax.grid(visible=True, axis='both')
     ax.legend()
-    plt.show()
+    fig_name = output_dir.joinpath('modal_mass_distribution.png')
+    fig.savefig(fig_name)
 
 
 def create_freqs_type1(f1: float, df: float, ndf: int) -> List[float]:
@@ -136,7 +139,8 @@ def create_freqs_type3(modal_f_arr: List[float], f1: float, f2: float, nef: int,
     return freq3_arr
 
 
-def plot_modal_and_excitation_frequencies(freqs_modal: npt.ArrayLike, freqs_excite: npt.ArrayLike):
+def plot_modal_and_excitation_frequencies(
+        freqs_modal: npt.ArrayLike, freqs_excite: npt.ArrayLike, output_dir: Path):
     fig = plt.figure(figsize=(8, 1.6), tight_layout=True)
     ax = plt.axes()
     ax.vlines(
@@ -152,10 +156,11 @@ def plot_modal_and_excitation_frequencies(freqs_modal: npt.ArrayLike, freqs_exci
     ax.set_title('Range of frequency')
     ax.set_yticks([])
     ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
-    plt.show()
+    fig_name = output_dir.joinpath('range_of_frequency.png')
+    fig.savefig(fig_name)
 
 
-def get_excitation_frequency(freqs_modal: List[float]):
+def get_excitation_frequency(freqs_modal: List[float], config: dict):
     freqs = []
     if 'type1' in config['modal']:
         f1 = config['modal']['type1']['f1']
@@ -185,15 +190,27 @@ def get_excitation_frequency(freqs_modal: List[float]):
     return freqs_excite
 
 
-def main():
-    df = fetch_modal_mass(OUT_PATH)
+def main(config_name: str):
+    # Parse config
+    config = read_configuration(config_name)
+    output_dir = Path(config['output'])
+    out_path = config['modal']['out_path']
+
+    # Process data
+    df = fetch_modal_mass(out_path)
     freqs_modal = df['frequency']
     masses_x, masses_y, masses_z = df['mass_x'], df['mass_y'], df['mass_z']
+    freqs_excite = get_excitation_frequency(freqs_modal.to_list(), config)
 
-    freqs_excite = get_excitation_frequency(freqs_modal.to_list())
-    plot_mass_distribution(freqs_modal, masses_x, masses_y, masses_z)
-    plot_modal_and_excitation_frequencies(freqs_modal, freqs_excite)
+    # Plot
+    output_dir.mkdir(parents=True, exist_ok=True)
+    plot_mass_distribution(
+        freqs_modal, masses_x, masses_y, masses_z, output_dir
+    )
+    plot_modal_and_excitation_frequencies(
+        freqs_modal, freqs_excite, output_dir
+    )
 
 
 if __name__ == '__main__':
-    main()
+    main('config_test.json')

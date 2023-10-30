@@ -1,0 +1,39 @@
+{
+    "output": "D:\\hyperworks-tools-output",
+    "modal": {
+        "out_path": ".\\test\\modal\\type-m-subassy-frf.out",
+        "type1": {
+            "f1": 5,
+            "df": 10,
+            "ndf": 19
+        },
+        "type3": {
+            "f1": 200,
+            "f2": 1000,
+            "nef": 5,
+            "cluster": 2.0
+        }
+    },
+    "frf": {
+        "data_dir": ".\\test\\frf\\csv",
+        "fem_path": ".\\test\\frf\\type-m-subassy-frf.fem",
+        "curve_num_each_plot": 5,
+        "time_range": [0, 1000],
+        "top_view": ".\\test\\frf\\img\\top-view.png",
+        "bottom_view": ".\\test\\frf\\img\\bottom-view.png"
+    },
+    "rel_disp": {
+        "data_dir": ".\\test\\rel_disp",
+        "directions": ["X", "Y", "Z"],
+        "node_pairs": {
+            "top_1": [18565, 18526],
+            "top_2": [18559, 18527],
+            "top_3": [18568, 18525],
+            "top_4": [18562, 18528],
+            "bot_1": [18574, 18532],
+            "bot_2": [18577, 18529],
+            "bot_3": [18571, 18531],
+            "bot_4": [18580, 18530]
+        }
+    }
+}
