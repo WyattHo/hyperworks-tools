@@ -29,6 +29,7 @@ proc reproduce_viewpoint {viewpoint} {
     window_handle GetViewControlHandle viewctrl_handle
     viewctrl_handle SetOrientation "$orientation" "Current View"
     viewctrl_handle SetOrtho "$ortho" "Current View"
+    client_handle Draw
     hwi CloseStack
 }
 
