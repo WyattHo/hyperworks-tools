@@ -185,7 +185,7 @@ def get_excitation_frequency(freqs_modal: List[float], config: dict):
     return freqs_excite
 
 
-def main(config_name: str = 'config_test.json'):
+def main(config_name: str):
     # Parse config
     config = read_configuration(config_name)
     out_path = config['modal']['out_path']
@@ -202,4 +202,4 @@ def main(config_name: str = 'config_test.json'):
 
 
 if __name__ == '__main__':
-    main()
+    main('config_test.json')

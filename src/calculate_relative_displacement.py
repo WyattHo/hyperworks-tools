@@ -56,7 +56,7 @@ def output_csv(output_results, output_dir):
         df.to_csv(output_path, index=False)
 
 
-def main(config_name: str = 'config_test.json'):
+def main(config_name: str):
     # Parse config
     config = read_configuration(config_name)
     data_dir = Path(config['rel_disp']['data_dir'])
@@ -79,4 +79,4 @@ def main(config_name: str = 'config_test.json'):
 
 
 if __name__ == '__main__':
-    main()
+    main('config_test.json')

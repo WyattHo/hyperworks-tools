@@ -205,7 +205,7 @@ def plot_distribution(
     plt.show()
 
 
-def main(config_name: str = 'config_test.json'):
+def main(config_name: str):
     # Parse config
     config = read_configuration(config_name)
     data_dir = config['frf']['data_dir']
@@ -231,4 +231,4 @@ def main(config_name: str = 'config_test.json'):
 
 
 if __name__ == '__main__':
-    main()
+    main('config_test.json')
