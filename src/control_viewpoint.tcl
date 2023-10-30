@@ -32,7 +32,7 @@ proc reproduce_viewpoint {} {
     hwi CloseStack
 }
 
-proc retValues {} {return "save reproduce"}
+proc get_options {} {return "save reproduce"}
 
 proc main {} {
     # Reference of "hwtk::inputdialog"
@@ -42,10 +42,10 @@ proc main {} {
             -title "Viewpoint: " \
             -text "Choose the mode:" \
             -inputtype "combobox" \
-            -valuelistcommand retValues]
+            -valuelistcommand get_options]
 
     global viewpoint
-    if {[string match save $mode]} {
+    if {[string match "save" $mode]} {
         set viewpoint [save_viewpoint]
     } else {
         reproduce_viewpoint
