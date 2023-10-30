@@ -14,8 +14,8 @@ proc save_viewpoint {} {
     return "$orientation $ortho"
 }
 
-proc reproduce_viewpoint {} {
-    global viewpoint
+
+proc reproduce_viewpoint {viewpoint} {
     set orientation [lrange $viewpoint 0 5]
     set ortho [lrange $viewpoint 6 end]
     puts "reproduce orientation: $orientation"
@@ -32,7 +32,9 @@ proc reproduce_viewpoint {} {
     hwi CloseStack
 }
 
+
 proc get_options {} {return "save reproduce"}
+
 
 proc main {} {
     # Reference of "hwtk::inputdialog"
@@ -44,13 +46,18 @@ proc main {} {
             -inputtype "combobox" \
             -valuelistcommand get_options]
 
-    global viewpoint
     if {[string match "save" $mode]} {
         set viewpoint [save_viewpoint]
+        set fileHandle [open "viewpoint.txt" w]
+        puts $fileHandle $viewpoint
+        close $fileHandle
     } else {
-        reproduce_viewpoint
+        set fileHandle [open "viewpoint.txt" r]
+        set viewpoint [read $fileHandle]
+        reproduce_viewpoint $viewpoint
     }
     puts "-----------Done!-----------"
 }
-main
 
+
+main
