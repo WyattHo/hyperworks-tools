@@ -25,11 +25,12 @@ def retrieve_acceleration(config: dict):
     cwd = config['cwd']
     h3d_name = config['model'] + '.h3d'
     tcl_name = config['tcl_name']
+    nodes = ','.join([f'{idx}' for idx in config['nodes']])
 
     h3d_path = Path(cwd).joinpath(h3d_name)
     tcl_path = Path(__file__).parent.joinpath(tcl_name)
     
-    cmd = f'hw -tcl {tcl_path} {h3d_path}'
+    cmd = f'hw -tcl {tcl_path} {h3d_path} {nodes}'
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
