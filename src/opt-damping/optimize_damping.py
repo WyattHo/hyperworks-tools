@@ -21,9 +21,18 @@ def run_solver(config: dict) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
+def retrieve_acceleration(config: dict):
+    cwd = config['cwd']
+    tcl_name = 'process_h3d.tcl'
+    tcl_path = Path(__file__).parent.joinpath(tcl_name)
+    cmd = f'hw -tcl {tcl_path}'
+    return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
+
+
 def main():
     config = read_configuration('config.json')
-    run_solver(config)
+    # run_solver(config)
+    retrieve_acceleration(config)
 
 
 if __name__ == '__main__':

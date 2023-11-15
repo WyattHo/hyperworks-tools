@@ -1,0 +1,1 @@
+hwc open animation modelandresult D:/my-analysis/kubota-package-8-module/test/kbt-fully-customized-8-module-un383.h3d D:/my-analysis/kubota-package-8-module/test/kbt-fully-customized-8-module-un383.h3d
