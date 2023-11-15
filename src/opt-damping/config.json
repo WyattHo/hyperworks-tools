@@ -1,7 +1,8 @@
 {
     "cwd": "D:\\my-analysis\\kubota-package-8-module\\test",
     "solver": "optistruct",
-    "fem": "kbt-fully-customized-8-module-un383.fem",
+    "model": "kbt-fully-customized-8-module-un383",
     "nt": 16,
-    "core": "in"
+    "core": "in",
+    "tcl_name": "process_h3d.tcl"
 }

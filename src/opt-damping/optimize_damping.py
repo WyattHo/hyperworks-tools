@@ -14,7 +14,7 @@ def read_configuration(config_name: str) -> dict:
 def run_solver(config: dict) -> subprocess.CompletedProcess:
     cwd = config['cwd']
     solver = config['solver']
-    fem = config['fem']
+    fem = config['model'] + '.fem'
     nt = config['nt']
     core = config['core']
     cmd = f'{solver} {fem} -nt {nt} -core {core}'
@@ -23,9 +23,13 @@ def run_solver(config: dict) -> subprocess.CompletedProcess:
 
 def retrieve_acceleration(config: dict):
     cwd = config['cwd']
-    tcl_name = 'process_h3d.tcl'
+    h3d_name = config['model'] + '.h3d'
+    tcl_name = config['tcl_name']
+
+    h3d_path = Path(cwd).joinpath(h3d_name)
     tcl_path = Path(__file__).parent.joinpath(tcl_name)
-    cmd = f'hw -tcl {tcl_path}'
+    
+    cmd = f'hw -tcl {tcl_path} {h3d_path}'
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
