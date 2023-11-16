@@ -22,6 +22,18 @@ proc assign_data_y {range_curve h3d_path subcase_name node_label} {
 }
 
 
+proc create_curves {page_idx window_idx h3d_path subcase_name nodes} {
+    foreach node_idx $nodes {
+        set node_label "N$node_idx"
+        set line_idx [expr [lsearch $nodes $node_idx] + 1]
+        set range_curve "p:$page_idx w:$window_idx i:$line_idx"
+        create_empty_curve $page_idx $window_idx
+        assign_data_x $range_curve $h3d_path $subcase_name $node_label
+        assign_data_y $range_curve $h3d_path $subcase_name $node_label
+    }
+}
+
+
 proc main {argv} {
     # Parse arguments
     lassign [lrange $argv 3 end] arg_1 arg_2
@@ -33,20 +45,11 @@ proc main {argv} {
     set window_idx "2"
     set subcase_name "Subcase 2 (FRF_X)"
 
-    # Modify the page and windows
+    # Manipulate the page and windows
     hwc open animation modelandresult $h3d_path $h3d_path
     hwc hwd page current layout=1 activewindow=$window_idx
     hwc hwd window type="HyperGraph 2D"
-
-    # Iterate curves
-    foreach node_idx $nodes {
-        set node_label "N$node_idx"
-        set line_idx [expr [lsearch $nodes $node_idx] + 1]
-        set range_curve "p:$page_idx w:$window_idx i:$line_idx"
-        create_empty_curve $page_idx $window_idx
-        assign_data_x $range_curve $h3d_path $subcase_name $node_label
-        assign_data_y $range_curve $h3d_path $subcase_name $node_label
-    }
+    create_curves $page_idx $window_idx $h3d_path $subcase_name $nodes
 }
 
 
