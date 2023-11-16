@@ -1,43 +1,53 @@
-# Parse arguments
-lassign [lrange $argv 3 end] arg_1 arg_2
-set file_h3d [string map {\\ /} $arg_1]
-set nodes [split $arg_2 ","]
-
-
-# Open h3d
-hwc open animation modelandresult $file_h3d $file_h3d
-
-
-# Modify the page and windows
-hwc hwd page current layout=1 activewindow=2
-hwc hwd window type="HyperGraph 2D"
-
-
-set line_idx 0
-foreach node_idx $nodes {
-    set line_idx [expr $line_idx + 1]
-    set node_label "N$node_idx"
-
-    # Create empty curve
-    set page "1"
-    set window "2"
-    set subcase "Subcase 2 (FRF_X)"
-    set range_window "p:$page w:$window"
-    set range_curve "p:$page w:$window i:$line_idx"
+proc create_empty_curve {page_idx window_idx} {
+    set range_window "p:$page_idx w:$window_idx"
     hwc xy curve create range=$range_window
+}
 
-    # Edit X data
-    hwc xy curve edit range=$range_curve xfile=$file_h3d
-    hwc xy curve edit range=$range_curve xsubcase=$subcase
+
+proc assign_data_x {range_curve h3d_path subcase_name node_label} {
+    hwc xy curve edit range=$range_curve xfile=$h3d_path
+    hwc xy curve edit range=$range_curve xsubcase=$subcase_name
     hwc xy curve edit range=$range_curve xtype="Acceleration (Grids)"
     hwc xy curve edit range=$range_curve xrequest=$node_label
     hwc xy curve edit range=$range_curve xcomponent="Time"
+}
 
-    # Edit Y data
-    hwc xy curve edit range=$range_curve yfile=$file_h3d
-    hwc xy curve edit range=$range_curve ysubcase=$subcase
+
+proc assign_data_y {range_curve h3d_path subcase_name node_label} {
+    hwc xy curve edit range=$range_curve yfile=$h3d_path
+    hwc xy curve edit range=$range_curve ysubcase=$subcase_name
     hwc xy curve edit range=$range_curve ytype="Acceleration (Grids)"
     hwc xy curve edit range=$range_curve yrequest=$node_label
     hwc xy curve edit range=$range_curve ycomponent="MAG | X"
 }
 
+
+proc main {argv} {
+    # Parse arguments
+    lassign [lrange $argv 3 end] arg_1 arg_2
+    set h3d_path [string map {\\ /} $arg_1]
+    set nodes [split $arg_2 ","]
+
+    # Constants
+    set page_idx "1"
+    set window_idx "2"
+    set subcase_name "Subcase 2 (FRF_X)"
+
+    # Modify the page and windows
+    hwc open animation modelandresult $h3d_path $h3d_path
+    hwc hwd page current layout=1 activewindow=$window_idx
+    hwc hwd window type="HyperGraph 2D"
+
+    # Iterate curves
+    foreach node_idx $nodes {
+        set node_label "N$node_idx"
+        set line_idx [expr [lsearch $nodes $node_idx] + 1]
+        set range_curve "p:$page_idx w:$window_idx i:$line_idx"
+        create_empty_curve $page_idx $window_idx
+        assign_data_x $range_curve $h3d_path $subcase_name $node_label
+        assign_data_y $range_curve $h3d_path $subcase_name $node_label
+    }
+}
+
+
+main $argv
