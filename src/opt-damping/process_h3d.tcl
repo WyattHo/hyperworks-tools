@@ -34,6 +34,20 @@ proc create_curves {page_idx window_idx h3d_path subcase_name nodes} {
 }
 
 
+proc export_csv {h3d_path} {
+    set model_name [string trimright $h3d_path ".h3d"]
+    set suffix "subcase2"
+    set csv_path "$model_name-$suffix.csv"
+
+    hwi GetSessionHandle sess
+    sess GetClientManagerHandle pm Plot
+    pm GetExportCtrlHandle exp
+    exp SetFormat "CSV Blocks"
+    exp SetFilename $csv_path
+    exp Export
+}
+
+
 proc main {argv} {
     # Parse arguments
     lassign [lrange $argv 3 end] arg_1 arg_2
@@ -50,6 +64,10 @@ proc main {argv} {
     hwc hwd page current layout=1 activewindow=$window_idx
     hwc hwd window type="HyperGraph 2D"
     create_curves $page_idx $window_idx $h3d_path $subcase_name $nodes
+
+    # Export and exit
+    export_csv $h3d_path
+    hwc hwd exit
 }
 
 
