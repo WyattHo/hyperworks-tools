@@ -35,7 +35,8 @@ proc create_curves {page_idx window_idx h3d_path subcase_name nodes} {
 
 
 proc export_csv {h3d_path} {
-    set model_name [string trimright $h3d_path ".h3d"]
+    set len [string length $h3d_path]
+    set model_name [string range $h3d_path 0 [expr $len - 5]]
     set suffix "subcase2"
     set csv_path "$model_name-$suffix.csv"
 
