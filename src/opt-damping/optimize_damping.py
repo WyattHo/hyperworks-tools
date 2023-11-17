@@ -61,14 +61,36 @@ def get_peak_response(config: dict, logger: logging.Logger) -> list[float]:
     return [peak_freq, peak_acc]
 
 
+def check_tolerance(config: dict, peak_acc: float):
+    tgt_acc = config['target'][-1]
+    tol = config['tolerance_percentage']
+    delta = (peak_acc - tgt_acc) / tgt_acc * 100
+    if -tol < delta < tol:
+        return True
+    else:
+        return False
+
+
 def main():
     config = read_configuration('config.json')
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
     logger.info('Start.')
-    run_solver(config, logger)
-    retrieve_acceleration(config, logger)
-    peak_freq, peak_acc = get_peak_response(config, logger)
+    
+    itr = 0
+    while True:
+        # run_solver(config, logger)
+        # retrieve_acceleration(config, logger)
+        peak_freq, peak_acc = get_peak_response(config, logger)
+        if check_tolerance(config, peak_acc):
+            logger.info('Converged!')
+            break
+        
+        itr += 1
+        if itr > config['iteration_limit']:
+            logger.info('Reached the iteration limit.')
+            break
+
     logger.info('End.')
 
 
