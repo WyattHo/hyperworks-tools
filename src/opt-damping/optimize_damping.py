@@ -14,21 +14,21 @@ def read_configuration(config_name: str) -> dict:
     return config
 
 
-def run_solver(config: dict, logger: logging.Logger) -> subprocess.CompletedProcess:
-    logger.info('Runnung solver..')
+def run_solver(config: dict, model: str, logger: logging.Logger) -> subprocess.CompletedProcess:
     cwd = config['cwd']
     solver = config['solver']
-    fem = config['model'] + '.fem'
+    fem = model + '.fem'
     nt = config['nt']
     core = config['core']
     cmd = f'{solver} {fem} -nt {nt} -core {core}'
+    logger.info(f'Runnung command: {cmd}')
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
-def retrieve_acceleration(config: dict, logger: logging.Logger) -> subprocess.CompletedProcess:
+def retrieve_acceleration(config: dict, model: str, logger: logging.Logger) -> subprocess.CompletedProcess:
     logger.info('Retrieving acceleration data..')
     cwd = config['cwd']
-    h3d_name = config['model'] + '.h3d'
+    h3d_name = model + '.h3d'
     tcl_name = config['tcl_name']
     nodes = ','.join([f'{idx}' for idx in config['nodes']])
 
@@ -39,11 +39,10 @@ def retrieve_acceleration(config: dict, logger: logging.Logger) -> subprocess.Co
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
-def get_peak_response(config: dict, logger: logging.Logger) -> list[float]:
+def get_peak_response(config: dict, model: str, logger: logging.Logger) -> list[float]:
     logger.info('Analyzing peak response..')
     cwd = config['cwd']
-    csv_name = config['model'] + '-subcase2.csv'
-    target = config['target']
+    csv_name = model + '-subcase2.csv'
     G = 9806.65
 
     csv_path = Path(cwd).joinpath(csv_name)
@@ -56,8 +55,7 @@ def get_peak_response(config: dict, logger: logging.Logger) -> list[float]:
             if max_acc > peak_acc:
                 peak_acc = max_acc
                 peak_freq = df['Time'].iloc[max_idx]
-    logger.info(f'Peak frequency: {peak_freq:.3f}Hz')
-    logger.info(f'Peak acceleration: {peak_acc:.3f}g')
+    logger.info(f'Peak frequency: {peak_freq:.3f}Hz. Peak acceleration: {peak_acc:.3f}g')
     return [peak_freq, peak_acc]
 
 
@@ -71,26 +69,68 @@ def check_tolerance(config: dict, peak_acc: float):
         return False
 
 
+def get_fem_content(config: dict, model_current: str) -> list[str]:
+    cwd = config['cwd']
+    fem = model_current + '.fem'
+    with open(Path(cwd).joinpath(fem), 'r') as f:
+        lines = f.readlines()
+    return lines
+
+
+def parse_damping_row_idx(config: dict, lines: list[str]) -> float:
+    rubber_name = config['rubber_name']
+    for row_idx, line in enumerate(lines):
+        if line.startswith('$HMNAME MAT') and rubber_name in line:
+            break
+    row_idx += 2
+    rubber_data = lines[row_idx]
+    damping = float(rubber_data[64:])
+    return damping, row_idx
+
+
+def calculate_disturbance(config: dict, lines: list[str], row_idx: int, damping_ori: float, logger: logging.Logger):
+    cwd = config['cwd']
+    DAMPING_DELTA = 0.0005
+    damping_temp = damping_ori + DAMPING_DELTA
+    rubber_data_temp = lines[row_idx][0:64] + f'{damping_temp:<8.4f}\n'
+    lines_temp = lines.copy()
+    lines_temp[row_idx] = rubber_data_temp
+
+    fem_temp = Path(cwd).joinpath('temp.fem')
+    with open(fem_temp, 'w') as f:
+        f.writelines(lines_temp)
+
+    run_solver(config, 'temp', logger)
+    retrieve_acceleration(config, 'temp', logger)
+    return get_peak_response(config, 'temp', logger)
+
+
 def main():
     config = read_configuration('config.json')
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
     logger.info('Start.')
-    
+
     itr = 0
+    model_current = config['model']
     while True:
-        # run_solver(config, logger)
-        # retrieve_acceleration(config, logger)
-        peak_freq, peak_acc = get_peak_response(config, logger)
+        # run_solver(config, model_current, logger)
+        # retrieve_acceleration(config, model_current, logger)
+        peak_freq, peak_acc = get_peak_response(config, model_current, logger)
         if check_tolerance(config, peak_acc):
             logger.info('Converged!')
             break
-        
+
         itr += 1
         if itr > config['iteration_limit']:
             logger.info('Reached the iteration limit.')
             break
 
+        lines = get_fem_content(config, model_current)
+        damping_current, row_idx = parse_damping_row_idx(config, lines)
+        peak_freq_dis, peak_acc_dis = calculate_disturbance(config, lines, row_idx, damping_current, logger)
+        slope = (peak_acc_dis - peak_acc) / 0.0005
+        damping_next = damping_current - peak_acc / slope
     logger.info('End.')
 
 
