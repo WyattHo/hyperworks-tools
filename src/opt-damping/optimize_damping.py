@@ -14,7 +14,8 @@ def read_configuration(config_name: str) -> dict:
     return config
 
 
-def run_solver(config: dict) -> subprocess.CompletedProcess:
+def run_solver(config: dict, logger: logging.Logger) -> subprocess.CompletedProcess:
+    logger.info('Runnung solver..')
     cwd = config['cwd']
     solver = config['solver']
     fem = config['model'] + '.fem'
@@ -24,7 +25,8 @@ def run_solver(config: dict) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
-def retrieve_acceleration(config: dict):
+def retrieve_acceleration(config: dict, logger: logging.Logger) -> subprocess.CompletedProcess:
+    logger.info('Retrieving acceleration data..')
     cwd = config['cwd']
     h3d_name = config['model'] + '.h3d'
     tcl_name = config['tcl_name']
@@ -37,7 +39,8 @@ def retrieve_acceleration(config: dict):
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
-def get_peak_response(config: dict) -> list[float]:
+def get_peak_response(config: dict, logger: logging.Logger) -> list[float]:
+    logger.info('Analyzing peak response..')
     cwd = config['cwd']
     csv_name = config['model'] + '-subcase2.csv'
     target = config['target']
@@ -48,12 +51,14 @@ def get_peak_response(config: dict) -> list[float]:
     peak_freq, peak_acc = 0, 0
     for col in df.columns:
         if not col.startswith('Time'):
-            max_acc = df[col].max()
+            max_acc = df[col].max() / G
             max_idx = df[col].idxmax()
             if max_acc > peak_acc:
                 peak_acc = max_acc
                 peak_freq = df['Time'].iloc[max_idx]
-    return [peak_freq, peak_acc / G]
+    logger.info(f'Peak frequency: {peak_freq:.3f}Hz')
+    logger.info(f'Peak acceleration: {peak_acc:.3f}g')
+    return [peak_freq, peak_acc]
 
 
 def main():
@@ -61,14 +66,9 @@ def main():
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
     logger.info('Start.')
-    logger.info('Runnung solver..')
-    run_solver(config)
-    logger.info('Retrieving acceleration data..')
-    retrieve_acceleration(config)
-    logger.info('Analyzing peak response..')
-    peak_freq, peak_acc = get_peak_response(config)
-    logger.info(f'Peak frequency: {peak_freq:.3f}Hz')
-    logger.info(f'Peak acceleration: {peak_acc:.3f}g')
+    run_solver(config, logger)
+    retrieve_acceleration(config, logger)
+    peak_freq, peak_acc = get_peak_response(config, logger)
     logger.info('End.')
 
 
