@@ -21,12 +21,11 @@ def run_solver(config: dict, model: str, logger: logging.Logger) -> subprocess.C
     nt = config['nt']
     core = config['core']
     cmd = f'{solver} {fem} -nt {nt} -core {core}'
-    logger.info(f'Runnung command: {cmd}')
+    logger.info(f'Executing command: {cmd}')
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
 def retrieve_acceleration(config: dict, model: str, logger: logging.Logger) -> subprocess.CompletedProcess:
-    logger.info('Retrieving acceleration data..')
     cwd = config['cwd']
     h3d_name = model + '.h3d'
     tcl_name = config['tcl_name']
@@ -36,11 +35,11 @@ def retrieve_acceleration(config: dict, model: str, logger: logging.Logger) -> s
     tcl_path = Path(__file__).parent.joinpath(tcl_name)
 
     cmd = f'hw -tcl {tcl_path} {h3d_path} {nodes}'
+    logger.info(f'Executing command: {cmd}')
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
 def get_peak_response(config: dict, model: str, logger: logging.Logger) -> list[float]:
-    logger.info('Analyzing peak response..')
     cwd = config['cwd']
     csv_name = model + '-subcase2.csv'
     G = 9806.65
@@ -55,28 +54,26 @@ def get_peak_response(config: dict, model: str, logger: logging.Logger) -> list[
             if max_acc > peak_acc:
                 peak_acc = max_acc
                 peak_freq = df['Time'].iloc[max_idx]
-    logger.info(
-        f'Peak frequency: {peak_freq:.3f}Hz. Peak acceleration: {peak_acc:.3f}g')
+    logger.info(f'peak_freq: {peak_freq:.3f}Hz. peak_acc: {peak_acc:.3f}g')
     return [peak_freq, peak_acc]
 
 
 def check_tolerance(config: dict, peak_acc: float):
     tgt_acc = config['target'][-1]
-    tol = config['tolerance_percentage']
-    delta = (peak_acc - tgt_acc) / tgt_acc * 100
-    if -tol < delta < tol:
+    tolerance = config['tolerance_percentage']
+    error = (peak_acc - tgt_acc) / tgt_acc * 100
+    if -tolerance < error < tolerance:
         return True
     else:
         return False
 
 
-def get_fem_info(config: dict, model_current: str) -> dict:
+def get_fem_info(config: dict, model: str) -> dict:
     cwd = config['cwd']
     rubber_name = config['rubber_name']
-    fem = model_current + '.fem'
+    fem = model + '.fem'
     with open(Path(cwd).joinpath(fem), 'r') as f:
         lines = f.readlines()
-
     for row_idx, line in enumerate(lines):
         if line.startswith('$HMNAME MAT') and rubber_name in line:
             break
@@ -84,16 +81,6 @@ def get_fem_info(config: dict, model_current: str) -> dict:
     rubber_data = lines[row_idx]
     damping = float(rubber_data[64:])
     return {'lines': lines, 'damping': damping, 'row_idx': row_idx}
-
-
-# def parse_damping_row_idx(lines: list[str], rubber_name: str) -> float:
-#     for row_idx, line in enumerate(lines):
-#         if line.startswith('$HMNAME MAT') and rubber_name in line:
-#             break
-#     row_idx += 2
-#     rubber_data = lines[row_idx]
-#     damping = float(rubber_data[64:])
-#     return damping, row_idx
 
 
 def create_fem_with_damping(lines: list[str], row_idx: int, damping: float, fem_path: str):
@@ -122,6 +109,7 @@ def calculate_next_damping(config: dict, fem_info: dict, peak_acc_ori: float, lo
     error_acc_tmp = peak_acc_tmp - tgt_acc
     slope = (error_acc_tmp - error_acc_ori) / DAMPING_DELTA
     damping_next = damping_ori - (error_acc_ori / slope)
+    logger.info(f'damping_ori: {damping_ori}, damping_next: {damping_next}')
     return damping_next
 
 

@@ -7,7 +7,7 @@
     "tcl_name": "process_h3d.tcl",
     "nodes": [2357428, 2357684, 2328963, 2325886],
     "rubber_name": "Rubber",
-    "tolerance_percentage": 5.0,
+    "tolerance_percentage": 0.5,
     "iteration_limit": 20,
     "target": [48.8714, 8.2362],
     "logging": {
