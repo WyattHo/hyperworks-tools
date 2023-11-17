@@ -1,4 +1,6 @@
 import json
+import logging
+import logging.config
 import pandas as pd
 import subprocess
 from pathlib import Path
@@ -56,9 +58,18 @@ def get_peak_response(config: dict) -> list[float]:
 
 def main():
     config = read_configuration('config.json')
-    # run_solver(config)
-    # retrieve_acceleration(config)
+    logging.config.dictConfig(config['logging'])
+    logger = logging.getLogger()
+    logger.info('Start.')
+    logger.info('Runnung solver..')
+    run_solver(config)
+    logger.info('Retrieving acceleration data..')
+    retrieve_acceleration(config)
+    logger.info('Analyzing peak response..')
     peak_freq, peak_acc = get_peak_response(config)
+    logger.info(f'Peak frequency: {peak_freq:.3f}Hz')
+    logger.info(f'Peak acceleration: {peak_acc:.3f}g')
+    logger.info('End.')
 
 
 if __name__ == '__main__':
