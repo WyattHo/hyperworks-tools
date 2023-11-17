@@ -70,41 +70,49 @@ def check_tolerance(config: dict, peak_acc: float):
         return False
 
 
-def get_fem_content(config: dict, model_current: str) -> list[str]:
+def get_fem_info(config: dict, model_current: str) -> dict:
     cwd = config['cwd']
+    rubber_name = config['rubber_name']
     fem = model_current + '.fem'
     with open(Path(cwd).joinpath(fem), 'r') as f:
         lines = f.readlines()
-    return lines
 
-
-def parse_damping_row_idx(lines: list[str], rubber_name: str) -> float:
     for row_idx, line in enumerate(lines):
         if line.startswith('$HMNAME MAT') and rubber_name in line:
             break
     row_idx += 2
     rubber_data = lines[row_idx]
     damping = float(rubber_data[64:])
-    return damping, row_idx
+    return {'lines': lines, 'damping': damping, 'row_idx': row_idx}
 
 
-def create_fem_with_damping(lines: list[str], row_idx: int, damping: float, fem_temp: str):
+# def parse_damping_row_idx(lines: list[str], rubber_name: str) -> float:
+#     for row_idx, line in enumerate(lines):
+#         if line.startswith('$HMNAME MAT') and rubber_name in line:
+#             break
+#     row_idx += 2
+#     rubber_data = lines[row_idx]
+#     damping = float(rubber_data[64:])
+#     return damping, row_idx
+
+
+def create_fem_with_damping(lines: list[str], row_idx: int, damping: float, fem_path: str):
     rubber_data_temp = lines[row_idx][0:64] + f'{damping:<8.4f}\n'
     lines_temp = lines.copy()
     lines_temp[row_idx] = rubber_data_temp
-    with open(fem_temp, 'w') as f:
+    with open(fem_path, 'w') as f:
         f.writelines(lines_temp)
 
 
-def calculate_next_damping(config: dict, lines: list[str], peak_acc_ori: float, logger: logging.Logger) -> float:
-    damping_ori, row_idx = parse_damping_row_idx(lines, config['rubber_name'])
+def calculate_next_damping(config: dict, fem_info: dict, peak_acc_ori: float, logger: logging.Logger) -> float:
     DAMPING_DELTA = 0.0002
+    lines, damping_ori, row_idx = list(fem_info.values())
     damping_tmp = damping_ori + DAMPING_DELTA
     
     cwd = config['cwd']
     model_tmp = 'temp'
-    fem_tmp = Path(cwd).joinpath(f'{model_tmp}.fem')
-    create_fem_with_damping(lines, row_idx, damping_tmp, fem_tmp)
+    fem_path_tmp = Path(cwd).joinpath(f'{model_tmp}.fem')
+    create_fem_with_damping(lines, row_idx, damping_tmp, fem_path_tmp)
     run_solver(config, model_tmp, logger)
     retrieve_acceleration(config, model_tmp, logger)
     peak_freq_tmp, peak_acc_tmp = get_peak_response(config, model_tmp, logger)
@@ -124,11 +132,12 @@ def main():
     logger.info('Start.')
 
     itr = 0
-    model_current = config['model']
+    model = config['model']
     while True:
-        # run_solver(config, model_current, logger)
-        # retrieve_acceleration(config, model_current, logger)
-        peak_freq, peak_acc = get_peak_response(config, model_current, logger)
+        run_solver(config, model, logger)
+        retrieve_acceleration(config, model, logger)
+        peak_freq, peak_acc = get_peak_response(config, model, logger)
+
         if check_tolerance(config, peak_acc):
             logger.info('Converged!')
             break
@@ -138,9 +147,15 @@ def main():
             logger.info('Reached the iteration limit.')
             break
 
-        lines = get_fem_content(config, model_current)
-        damping_next = calculate_next_damping(config, lines, peak_acc, logger)
-        
+        fem_info = get_fem_info(config, model)
+        damping_next = calculate_next_damping(config, fem_info, peak_acc, logger)
+        if itr == 1:
+            model += f'-itr{itr:03d}'
+        else:
+            model = model[0:-7] + f'-itr{itr:03d}'
+
+        fem_path = Path(config['cwd']).joinpath(f'{model}.fem')
+        create_fem_with_damping(fem_info['lines'], fem_info['row_idx'], damping_next, fem_path)
     logger.info('End.')
 
 
