@@ -55,7 +55,8 @@ def get_peak_response(config: dict, model: str, logger: logging.Logger) -> list[
             if max_acc > peak_acc:
                 peak_acc = max_acc
                 peak_freq = df['Time'].iloc[max_idx]
-    logger.info(f'Peak frequency: {peak_freq:.3f}Hz. Peak acceleration: {peak_acc:.3f}g')
+    logger.info(
+        f'Peak frequency: {peak_freq:.3f}Hz. Peak acceleration: {peak_acc:.3f}g')
     return [peak_freq, peak_acc]
 
 
@@ -77,8 +78,7 @@ def get_fem_content(config: dict, model_current: str) -> list[str]:
     return lines
 
 
-def parse_damping_row_idx(config: dict, lines: list[str]) -> float:
-    rubber_name = config['rubber_name']
+def parse_damping_row_idx(lines: list[str], rubber_name: str) -> float:
     for row_idx, line in enumerate(lines):
         if line.startswith('$HMNAME MAT') and rubber_name in line:
             break
@@ -88,21 +88,33 @@ def parse_damping_row_idx(config: dict, lines: list[str]) -> float:
     return damping, row_idx
 
 
-def calculate_disturbance(config: dict, lines: list[str], row_idx: int, damping_ori: float, logger: logging.Logger):
-    cwd = config['cwd']
-    DAMPING_DELTA = 0.0005
-    damping_temp = damping_ori + DAMPING_DELTA
-    rubber_data_temp = lines[row_idx][0:64] + f'{damping_temp:<8.4f}\n'
+def create_fem_with_damping(lines: list[str], row_idx: int, damping: float, fem_temp: str):
+    rubber_data_temp = lines[row_idx][0:64] + f'{damping:<8.4f}\n'
     lines_temp = lines.copy()
     lines_temp[row_idx] = rubber_data_temp
-
-    fem_temp = Path(cwd).joinpath('temp.fem')
     with open(fem_temp, 'w') as f:
         f.writelines(lines_temp)
 
-    run_solver(config, 'temp', logger)
-    retrieve_acceleration(config, 'temp', logger)
-    return get_peak_response(config, 'temp', logger)
+
+def calculate_next_damping(config: dict, lines: list[str], peak_acc_ori: float, logger: logging.Logger) -> float:
+    damping_ori, row_idx = parse_damping_row_idx(lines, config['rubber_name'])
+    DAMPING_DELTA = 0.0002
+    damping_tmp = damping_ori + DAMPING_DELTA
+    
+    cwd = config['cwd']
+    model_tmp = 'temp'
+    fem_tmp = Path(cwd).joinpath(f'{model_tmp}.fem')
+    create_fem_with_damping(lines, row_idx, damping_tmp, fem_tmp)
+    run_solver(config, model_tmp, logger)
+    retrieve_acceleration(config, model_tmp, logger)
+    peak_freq_tmp, peak_acc_tmp = get_peak_response(config, model_tmp, logger)
+
+    tgt_acc = config['target'][-1]
+    error_acc_ori = peak_acc_ori - tgt_acc
+    error_acc_tmp = peak_acc_tmp - tgt_acc
+    slope = (error_acc_tmp - error_acc_ori) / DAMPING_DELTA
+    damping_next = damping_ori - (error_acc_ori / slope)
+    return damping_next
 
 
 def main():
@@ -127,10 +139,8 @@ def main():
             break
 
         lines = get_fem_content(config, model_current)
-        damping_current, row_idx = parse_damping_row_idx(config, lines)
-        peak_freq_dis, peak_acc_dis = calculate_disturbance(config, lines, row_idx, damping_current, logger)
-        slope = (peak_acc_dis - peak_acc) / 0.0005
-        damping_next = damping_current - peak_acc / slope
+        damping_next = calculate_next_damping(config, lines, peak_acc, logger)
+        
     logger.info('End.')
 
 
