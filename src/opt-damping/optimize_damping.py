@@ -14,10 +14,32 @@ def read_configuration(config_name: str) -> dict:
     return config
 
 
-def run_solver(config: dict, model: str, logger: logging.Logger) -> subprocess.CompletedProcess:
+def get_fem_info(config: dict, model_name: str, logger: logging.Logger) -> dict:
+    cwd = config['cwd']
+    rubber_name = config['rubber_name']
+    fem = model_name + '.fem'
+    with open(Path(cwd).joinpath(fem), 'r') as f:
+        lines = f.readlines()
+    for row_idx, line in enumerate(lines):
+        if line.startswith('$HMNAME MAT') and rubber_name in line:
+            break
+    row_idx += 2
+    rubber_data = lines[row_idx]
+    damping = float(rubber_data[64:])
+    logger.info(f'current damping: {damping:8.5f}')
+    return {'lines': lines, 'damping': damping, 'row_idx': row_idx}
+
+
+def run_model(config: dict, model_name: str, logger: logging.Logger) -> list[float]:
+    run_solver(config, model_name, logger)
+    postprocess_h3d(config, model_name, logger)
+    return read_csv_data(config, model_name)
+
+
+def run_solver(config: dict, model_name: str, logger: logging.Logger) -> subprocess.CompletedProcess:
     cwd = config['cwd']
     solver = config['solver']
-    fem = model + '.fem'
+    fem = model_name + '.fem'
     nt = config['nt']
     core = config['core']
     cmd = f'{solver} {fem} -nt {nt} -core {core}'
@@ -25,9 +47,9 @@ def run_solver(config: dict, model: str, logger: logging.Logger) -> subprocess.C
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
-def retrieve_acceleration(config: dict, model: str, logger: logging.Logger) -> subprocess.CompletedProcess:
+def postprocess_h3d(config: dict, model_name: str, logger: logging.Logger) -> subprocess.CompletedProcess:
     cwd = config['cwd']
-    h3d_name = model + '.h3d'
+    h3d_name = model_name + '.h3d'
     tcl_name = config['tcl_name']
     nodes = ','.join([f'{idx}' for idx in config['nodes']])
 
@@ -39,11 +61,10 @@ def retrieve_acceleration(config: dict, model: str, logger: logging.Logger) -> s
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
-def get_peak_response(config: dict, model: str) -> list[float]:
+def read_csv_data(config: dict, model_name: str) -> list[float]:
     cwd = config['cwd']
-    csv_name = model + '-subcase2.csv'  # hard code QQ
+    csv_name = model_name + '-subcase2.csv'  # hard code QQ
     GRAV = 9806.65
-
     csv_path = Path(cwd).joinpath(csv_name)
     df = pd.read_csv(csv_path)
     peak_freq, peak_acc = 0, 0
@@ -55,6 +76,17 @@ def get_peak_response(config: dict, model: str) -> list[float]:
                 peak_acc = max_acc
                 peak_freq = df['Time'].iloc[max_idx]
     return [peak_freq, peak_acc]
+
+
+def break_iteration(config: dict, peak_acc: float, itr: int, logger: logging.Logger) -> bool:
+    break_iteration = False
+    if check_tolerance(config, peak_acc, logger):
+        logger.info('Converged!')
+        break_iteration = True
+    if itr > config['iteration_limit']:
+        logger.info('Reached the iteration limit.')
+        break_iteration = True
+    return break_iteration
 
 
 def check_tolerance(config: dict, peak_acc: float, logger: logging.Logger) -> bool:
@@ -70,30 +102,15 @@ def check_tolerance(config: dict, peak_acc: float, logger: logging.Logger) -> bo
         return False
 
 
-def get_fem_info(config: dict, model: str) -> dict:
-    cwd = config['cwd']
-    rubber_name = config['rubber_name']
-    fem = model + '.fem'
-    with open(Path(cwd).joinpath(fem), 'r') as f:
-        lines = f.readlines()
-    for row_idx, line in enumerate(lines):
-        if line.startswith('$HMNAME MAT') and rubber_name in line:
-            break
-    row_idx += 2
-    rubber_data = lines[row_idx]
-    damping = float(rubber_data[64:])
-    return {'lines': lines, 'damping': damping, 'row_idx': row_idx}
-
-
 def replace_fem_damping(lines: list[str], row_idx: int, damping: float, fem_path: str):
-    rubber_data_temp = lines[row_idx][0:64] + f'{damping:<8.4f}\n'
-    lines_temp = lines.copy()
-    lines_temp[row_idx] = rubber_data_temp
+    rubber_data_new = lines[row_idx][0:64] + f'{damping:<8.5f}\n'
+    lines_new = lines.copy()
+    lines_new[row_idx] = rubber_data_new
     with open(fem_path, 'w') as f:
-        f.writelines(lines_temp)
+        f.writelines(lines_new)
 
 
-def calculate_damping_next(config: dict, fem_info: dict, peak_acc_ori: float, logger: logging.Logger) -> float:
+def find_next_damping(config: dict, fem_info: dict, peak_acc_ori: float, logger: logging.Logger) -> float:
     cwd = config['cwd']
     tgt_acc = config['target'][-1]
     damping_delta = config['damping_delta']
@@ -103,17 +120,28 @@ def calculate_damping_next(config: dict, fem_info: dict, peak_acc_ori: float, lo
     fem_path_tmp = Path(cwd).joinpath(f'{model_tmp}.fem')
     damping_tmp = damping_ori + damping_delta
     replace_fem_damping(lines, row_idx, damping_tmp, fem_path_tmp)
-    run_solver(config, model_tmp, logger)
-    retrieve_acceleration(config, model_tmp, logger)
-    peak_freq_tmp, peak_acc_tmp = get_peak_response(config, model_tmp)
+    peak_freq_tmp, peak_acc_tmp = run_model(config, model_tmp, logger)
 
     error_acc_ori = peak_acc_ori - tgt_acc
     error_acc_tmp = peak_acc_tmp - tgt_acc
     slope = (error_acc_tmp - error_acc_ori) / damping_delta
     damping_next = damping_ori - (error_acc_ori / slope)
-    logger.info(f'damping_ori: {damping_ori:8.5f}')
-    logger.info(f'damping_next: {damping_next:8.5f}\n')
+    logger.info(f'next damping: {damping_next:8.5f}\n')
     return damping_next
+
+
+def create_next_fem(config: dict, model_name_ori: str, itr: int, fem_info: dict, damping_new: float) -> str:
+    cwd = config['cwd']
+    lines = fem_info['lines']
+    row_idx = fem_info['row_idx']
+    suffix = f'-itr{itr:03d}'
+    if itr == 1:
+        model_name_new = model_name_ori + suffix
+    else:
+        model_name_new = model_name_ori[0:-len(suffix)] + suffix
+    fem_path = Path(cwd).joinpath(f'{model_name_new}.fem')
+    replace_fem_damping(lines, row_idx, damping_new, fem_path)
+    return model_name_new
 
 
 def main():
@@ -121,36 +149,18 @@ def main():
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
     logger.info('Start.')
-
     itr = 0
-    model = config['model']
+    model_name = config['model_ini']
     while True:
         logger.info(f'Iteration: {itr:2d}')
-        run_solver(config, model, logger)
-        retrieve_acceleration(config, model, logger)
-        peak_freq, peak_acc = get_peak_response(config, model)
-
-        if check_tolerance(config, peak_acc, logger):
-            logger.info('Converged!')
+        fem_info = get_fem_info(config, model_name, logger)
+        peak_freq, peak_acc = run_model(config, model_name, logger)
+        if break_iteration(config, peak_acc, itr, logger):
             break
-
         itr += 1
-        if itr > config['iteration_limit']:
-            logger.info('Reached the iteration limit.')
-            break
-
-        fem_info = get_fem_info(config, model)
-        damping_next = calculate_damping_next(
-            config, fem_info, peak_acc, logger
-        )
-        if itr == 1:
-            model += f'-itr{itr:03d}'
-        else:
-            model = model[0:-7] + f'-itr{itr:03d}'
-
-        fem_path = Path(config['cwd']).joinpath(f'{model}.fem')
-        replace_fem_damping(
-            fem_info['lines'], fem_info['row_idx'], damping_next, fem_path
+        damping_new = find_next_damping(config, fem_info, peak_acc, logger)
+        model_name = create_next_fem(
+            config, model_name, itr, fem_info, damping_new
         )
     logger.info('End.')
 
