@@ -14,7 +14,7 @@ def read_configuration(config_name: str) -> dict:
     return config
 
 
-def get_fem_info(config: dict, model_name: str, logger: logging.Logger) -> dict:
+def parse_fem(config: dict, model_name: str, logger: logging.Logger) -> dict:
     cwd = config['cwd']
     rubber_name = config['rubber_name']
     fem = model_name + '.fem'
@@ -27,7 +27,7 @@ def get_fem_info(config: dict, model_name: str, logger: logging.Logger) -> dict:
     rubber_data = lines[row_idx]
     damping = float(rubber_data[64:])
     logger.info(f'current damping: {damping:8.5f}')
-    return {'lines': lines, 'damping': damping, 'row_idx': row_idx}
+    return lines, row_idx, damping
 
 
 def run_model(config: dict, model_name: str, logger: logging.Logger) -> list[float]:
@@ -78,7 +78,7 @@ def read_csv_data(config: dict, model_name: str) -> list[float]:
     return [peak_freq, peak_acc]
 
 
-def break_iteration(config: dict, peak_acc: float, itr: int, logger: logging.Logger) -> bool:
+def check_break_iteration(config: dict, peak_acc: float, itr: int, logger: logging.Logger) -> bool:
     break_iteration = False
     if check_tolerance(config, peak_acc, logger):
         logger.info('Converged!')
@@ -102,45 +102,33 @@ def check_tolerance(config: dict, peak_acc: float, logger: logging.Logger) -> bo
         return False
 
 
-def replace_fem_damping(lines: list[str], row_idx: int, damping: float, fem_path: str):
-    rubber_data_new = lines[row_idx][0:64] + f'{damping:<8.5f}\n'
-    lines_new = lines.copy()
+def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, damping: float, model_name: str):
+    cwd = config['cwd']
+    rubber_data_new = lines_ori[row_idx][0:64] + f'{damping:<8.5f}\n'
+    lines_new = lines_ori.copy()
     lines_new[row_idx] = rubber_data_new
+    fem_path = Path(cwd).joinpath(f'{model_name}.fem')
     with open(fem_path, 'w') as f:
         f.writelines(lines_new)
 
 
-def find_next_damping(config: dict, fem_info: dict, peak_acc_ori: float, logger: logging.Logger) -> float:
-    cwd = config['cwd']
+def find_new_damping(config: dict, damping_ori: float, peak_acc_ori: float, peak_acc_tmp: float, logger: logging.Logger) -> float:
     tgt_acc = config['target'][-1]
     damping_delta = config['damping_delta']
-    lines, damping_ori, row_idx = list(fem_info.values())
-
-    model_tmp = 'temp'
-    fem_path_tmp = Path(cwd).joinpath(f'{model_tmp}.fem')
-    damping_tmp = damping_ori + damping_delta
-    replace_fem_damping(lines, row_idx, damping_tmp, fem_path_tmp)
-    peak_freq_tmp, peak_acc_tmp = run_model(config, model_tmp, logger)
-
     error_acc_ori = peak_acc_ori - tgt_acc
     error_acc_tmp = peak_acc_tmp - tgt_acc
     slope = (error_acc_tmp - error_acc_ori) / damping_delta
-    damping_next = damping_ori - (error_acc_ori / slope)
-    logger.info(f'next damping: {damping_next:8.5f}\n')
-    return damping_next
+    damping_new = damping_ori - (error_acc_ori / slope)
+    logger.info(f'new damping: {damping_new:8.5f}\n')
+    return damping_new
 
 
-def create_next_fem(config: dict, model_name_ori: str, itr: int, fem_info: dict, damping_new: float) -> str:
-    cwd = config['cwd']
-    lines = fem_info['lines']
-    row_idx = fem_info['row_idx']
+def get_new_model_name(model_name_ori: str, itr: int):
     suffix = f'-itr{itr:03d}'
     if itr == 1:
         model_name_new = model_name_ori + suffix
     else:
         model_name_new = model_name_ori[0:-len(suffix)] + suffix
-    fem_path = Path(cwd).joinpath(f'{model_name_new}.fem')
-    replace_fem_damping(lines, row_idx, damping_new, fem_path)
     return model_name_new
 
 
@@ -148,21 +136,32 @@ def main():
     config = read_configuration('config.json')
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
-    logger.info('Start.')
+
     itr = 0
     model_name = config['model_ini']
+    damping_delta = config['damping_delta']
+    model_tmp = 'temp'
     while True:
+        # Current model
         logger.info(f'Iteration: {itr:2d}')
-        fem_info = get_fem_info(config, model_name, logger)
+        lines, row_idx, damping = parse_fem(config, model_name, logger)
         peak_freq, peak_acc = run_model(config, model_name, logger)
-        if break_iteration(config, peak_acc, itr, logger):
+        if check_break_iteration(config, peak_acc, itr, logger):
             break
         itr += 1
-        damping_new = find_next_damping(config, fem_info, peak_acc, logger)
-        model_name = create_next_fem(
-            config, model_name, itr, fem_info, damping_new
+
+        # Temp model
+        damping_tmp = damping + damping_delta
+        save_new_fem(config, lines, row_idx, damping_tmp, model_tmp)
+        peak_freq_tmp, peak_acc_tmp = run_model(config, model_tmp, logger)
+
+        # New model
+        damping_new = find_new_damping(
+            config, damping, peak_acc, peak_acc_tmp, logger
         )
-    logger.info('End.')
+        model_name = get_new_model_name(model_name, itr)
+        save_new_fem(config, lines, row_idx, damping_new, model_name)
+    logger.info('Done.')
 
 
 if __name__ == '__main__':
