@@ -15,7 +15,7 @@
         "target": [48.8714, 8.2362],
         "tolerance_percentage": 0.05,
         "iteration_limit": 20,
-        "damping_delta": 0.0001
+        "delta": [0.01, 0.0001]
     },
     "logging": {
         "version": 1,

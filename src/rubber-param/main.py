@@ -34,8 +34,8 @@ def retrieve_parameters(rubber_data: str) -> tuple[float, float]:
 
 
 def run_model(config: dict, model_name: str, logger: logging.Logger) -> tuple[float, float]:
-    # run_solver(config, model_name, logger)
-    # postprocess_h3d(config, model_name, logger)
+    run_solver(config, model_name, logger)
+    postprocess_h3d(config, model_name, logger)
     return read_csv_data(config, model_name)
 
 
@@ -103,9 +103,13 @@ def check_tolerance(config: dict, peak: tuple[float, float], logger: logging.Log
         return False
 
 
-def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, damping: float, model_name: str):
+def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, params: float, model_name: str):
     cwd = config['cwd']
-    rubber_data_new = lines_ori[row_idx][0:64] + f'{damping:<8.5f}\n'
+    elastic, damping = params
+    rubber_data_new = lines_ori[row_idx][0:16] \
+        + f'{elastic:<8.5f}' \
+        + lines_ori[row_idx][24:64] \
+        + f'{damping:<8.5f}\n'
     lines_new = lines_ori.copy()
     lines_new[row_idx] = rubber_data_new
     fem_path = Path(cwd).joinpath(f'{model_name}.fem')
@@ -139,7 +143,7 @@ def main():
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
     model_name = config['solve']['model_ini']
-    damping_delta = config['tunning']['damping_delta']
+    delta = config['tunning']['delta']
     model_tmp = 'temp'
 
     # Parse initial *.fem 
@@ -158,10 +162,15 @@ def main():
             break
         itr += 1
 
-        # # Temp model
-        # damping_tmp = damping + damping_delta
-        # save_new_fem(config, lines, row_idx, damping_tmp, model_tmp)
-        # peak_freq_tmp, peak_acc_tmp = run_model(config, model_tmp, logger)
+        # Temp model
+        params_tmp = [elastic + delta[0], damping]
+        save_new_fem(config, lines, row_idx, params_tmp, model_tmp)
+        peak_tmp_1 = run_model(config, model_tmp, logger)
+        
+        params_tmp = [elastic, damping + delta[1]]
+        save_new_fem(config, lines, row_idx, params_tmp, model_tmp)
+        peak_tmp_2 = run_model(config, model_tmp, logger)
+
 
         # # New model
         # damping_new = find_new_damping(
