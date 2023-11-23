@@ -14,7 +14,7 @@ def read_configuration(config_name: str) -> dict:
     return config
 
 
-def parse_fem(config: dict, model_name: str, logger: logging.Logger) -> dict:
+def tick_fem(config: dict, model_name: str) -> tuple[list[str], int]:
     cwd = config['cwd']
     rubber_name = config['tunning']['rubber_name']
     fem = model_name + '.fem'
@@ -24,16 +24,18 @@ def parse_fem(config: dict, model_name: str, logger: logging.Logger) -> dict:
         if line.startswith('$HMNAME MAT') and rubber_name in line:
             break
     row_idx += 2
-    rubber_data = lines[row_idx]
+    return lines, row_idx
+
+
+def retrieve_parameters(rubber_data: str) -> tuple[float, float]:
     elastic = float(rubber_data[16:24])
     damping = float(rubber_data[64:])
-    logger.info(f'current parameters: {elastic:8.5f}, {damping:8.5f}')
-    return lines, row_idx, (elastic, damping)
+    return elastic, damping
 
 
-def run_model(config: dict, model_name: str, logger: logging.Logger) -> list[float]:
-    run_solver(config, model_name, logger)
-    postprocess_h3d(config, model_name, logger)
+def run_model(config: dict, model_name: str, logger: logging.Logger) -> tuple[float, float]:
+    # run_solver(config, model_name, logger)
+    # postprocess_h3d(config, model_name, logger)
     return read_csv_data(config, model_name)
 
 
@@ -62,7 +64,7 @@ def postprocess_h3d(config: dict, model_name: str, logger: logging.Logger) -> su
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
-def read_csv_data(config: dict, model_name: str) -> list[float]:
+def read_csv_data(config: dict, model_name: str) -> tuple[float, float]:
     cwd = config['cwd']
     csv_name = model_name + '-subcase2.csv'  # hard code QQ
     GRAV = 9806.65
@@ -76,12 +78,12 @@ def read_csv_data(config: dict, model_name: str) -> list[float]:
             if max_acc > peak_acc:
                 peak_acc = max_acc
                 peak_freq = df['Time'].iloc[max_idx]
-    return [peak_freq, peak_acc]
+    return peak_freq, peak_acc
 
 
-def check_break_iteration(config: dict, peak_acc: float, itr: int, logger: logging.Logger) -> bool:
+def check_break_iteration(config: dict, peak: tuple[float, float], itr: int, logger: logging.Logger) -> bool:
     break_iteration = False
-    if check_tolerance(config, peak_acc, logger):
+    if check_tolerance(config, peak, logger):
         logger.info('Converged!')
         break_iteration = True
     if itr > config['tunning']['iteration_limit']:
@@ -90,14 +92,12 @@ def check_break_iteration(config: dict, peak_acc: float, itr: int, logger: loggi
     return break_iteration
 
 
-def check_tolerance(config: dict, peak_acc: float, logger: logging.Logger) -> bool:
-    tgt_acc = config['tunning']['target'][-1]
+def check_tolerance(config: dict, peak: tuple[float, float], logger: logging.Logger) -> bool:
+    target = config['tunning']['target']
     tolerance = config['tunning']['tolerance_percentage']
-    error = (peak_acc - tgt_acc) / tgt_acc * 100
-    logger.info(f'peak_acc: {peak_acc:.3f}g')
-    logger.info(f'tgt_acc: {tgt_acc:.3f}g')
-    logger.info(f'error: {error:.3f}%')
-    if -tolerance < error < tolerance:
+    error = sum([abs((p-t)/t) for p, t in zip(peak, target)]) / 2 * 100
+    logger.info(f'Error: {error:.3f}%')
+    if error < tolerance:
         return True
     else:
         return False
@@ -134,20 +134,27 @@ def get_new_model_name(model_name_ori: str, itr: int):
 
 
 def main():
+    # Configurations
     config = read_configuration('config.json')
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
-
-    itr = 0
     model_name = config['solve']['model_ini']
     damping_delta = config['tunning']['damping_delta']
     model_tmp = 'temp'
+
+    # Parse initial *.fem 
+    lines, row_idx = tick_fem(config, model_name)
+    elastic, damping = retrieve_parameters(lines[row_idx])
+
+    itr = 0
     while True:
-        # Current model
+        # Review current model
         logger.info(f'Iteration: {itr:2d}')
-        lines, row_idx, params = parse_fem(config, model_name, logger)
-        peak_freq, peak_acc = run_model(config, model_name, logger)
-        if check_break_iteration(config, peak_acc, itr, logger):
+        logger.info(f'Elastic: {elastic:8.5f}, Damping: {damping:8.5f}')
+
+        # Run current model
+        peak = run_model(config, model_name, logger)
+        if check_break_iteration(config, peak, itr, logger):
             break
         itr += 1
 
