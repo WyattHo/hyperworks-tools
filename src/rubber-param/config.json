@@ -4,7 +4,7 @@
     "model_ini": "kbt-fully-customized-8-module-un383",
     "nt": 16,
     "core": "in",
-    "tcl_name": "process_h3d.tcl",
+    "tcl_name": "export_nodes_acceleration.tcl",
     "nodes": [2357428, 2357684, 2328963, 2325886],
     "rubber_name": "Rubber",
     "tolerance_percentage": 0.05,
