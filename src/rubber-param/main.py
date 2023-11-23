@@ -16,7 +16,7 @@ def read_configuration(config_name: str) -> dict:
 
 def parse_fem(config: dict, model_name: str, logger: logging.Logger) -> dict:
     cwd = config['cwd']
-    rubber_name = config['rubber_name']
+    rubber_name = config['tunning']['rubber_name']
     fem = model_name + '.fem'
     with open(Path(cwd).joinpath(fem), 'r') as f:
         lines = f.readlines()
@@ -38,10 +38,10 @@ def run_model(config: dict, model_name: str, logger: logging.Logger) -> list[flo
 
 def run_solver(config: dict, model_name: str, logger: logging.Logger) -> subprocess.CompletedProcess:
     cwd = config['cwd']
-    solver = config['solver']
+    solver = config['solve']['solver']
     fem = model_name + '.fem'
-    nt = config['nt']
-    core = config['core']
+    nt = config['solve']['nt']
+    core = config['solve']['core']
     cmd = f'{solver} {fem} -nt {nt} -core {core}'
     logger.info(f'Solving: {fem}')
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
@@ -50,8 +50,8 @@ def run_solver(config: dict, model_name: str, logger: logging.Logger) -> subproc
 def postprocess_h3d(config: dict, model_name: str, logger: logging.Logger) -> subprocess.CompletedProcess:
     cwd = config['cwd']
     h3d_name = model_name + '.h3d'
-    tcl_name = config['tcl_name']
-    nodes = ','.join([f'{idx}' for idx in config['nodes']])
+    tcl_name = config['export']['tcl_name']
+    nodes = ','.join([f'{idx}' for idx in config['export']['nodes']])
 
     h3d_path = Path(cwd).joinpath(h3d_name)
     tcl_path = Path(__file__).parent.joinpath(tcl_name)
@@ -83,15 +83,15 @@ def check_break_iteration(config: dict, peak_acc: float, itr: int, logger: loggi
     if check_tolerance(config, peak_acc, logger):
         logger.info('Converged!')
         break_iteration = True
-    if itr > config['iteration_limit']:
+    if itr > config['tunning']['iteration_limit']:
         logger.info('Reached the iteration limit.')
         break_iteration = True
     return break_iteration
 
 
 def check_tolerance(config: dict, peak_acc: float, logger: logging.Logger) -> bool:
-    tgt_acc = config['target'][-1]
-    tolerance = config['tolerance_percentage']
+    tgt_acc = config['tunning']['target'][-1]
+    tolerance = config['tunning']['tolerance_percentage']
     error = (peak_acc - tgt_acc) / tgt_acc * 100
     logger.info(f'peak_acc: {peak_acc:.3f}g')
     logger.info(f'tgt_acc: {tgt_acc:.3f}g')
@@ -113,8 +113,8 @@ def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, damping: floa
 
 
 def find_new_damping(config: dict, damping_ori: float, peak_acc_ori: float, peak_acc_tmp: float, logger: logging.Logger) -> float:
-    tgt_acc = config['target'][-1]
-    damping_delta = config['damping_delta']
+    tgt_acc = config['tunning']['target'][-1]
+    damping_delta = config['tunning']['damping_delta']
     error_acc_ori = peak_acc_ori - tgt_acc
     error_acc_tmp = peak_acc_tmp - tgt_acc
     slope = (error_acc_tmp - error_acc_ori) / damping_delta
@@ -138,8 +138,8 @@ def main():
     logger = logging.getLogger()
 
     itr = 0
-    model_name = config['model_ini']
-    damping_delta = config['damping_delta']
+    model_name = config['solve']['model_ini']
+    damping_delta = config['tunning']['damping_delta']
     model_tmp = 'temp'
     while True:
         # Current model
