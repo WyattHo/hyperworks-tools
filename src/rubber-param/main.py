@@ -1,6 +1,7 @@
 import json
 import logging
 import logging.config
+import numpy as np
 import pandas as pd
 import subprocess
 from pathlib import Path
@@ -103,7 +104,7 @@ def check_tolerance(config: dict, peak: tuple[float, float], logger: logging.Log
         return False
 
 
-def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, params: float, model_name: str):
+def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, params: list[float], model_name: str):
     cwd = config['cwd']
     elastic, damping = params
     rubber_data_new = lines_ori[row_idx][0:16] \
@@ -117,15 +118,26 @@ def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, params: float
         f.writelines(lines_new)
 
 
-def find_new_damping(config: dict, damping_ori: float, peak_acc_ori: float, peak_acc_tmp: float, logger: logging.Logger) -> float:
-    tgt_acc = config['tunning']['target'][-1]
-    damping_delta = config['tunning']['damping_delta']
-    error_acc_ori = peak_acc_ori - tgt_acc
-    error_acc_tmp = peak_acc_tmp - tgt_acc
-    slope = (error_acc_tmp - error_acc_ori) / damping_delta
-    damping_new = damping_ori - (error_acc_ori / slope)
-    logger.info(f'new damping: {damping_new:8.5f}\n')
-    return damping_new
+def find_new_params(config: dict, peak: tuple[float, float], peak_dx1: tuple[float, float], peak_dx2: tuple[float, float], params: tuple[float, float]) -> list[float]:
+    dx1, dx2 = config['tunning']['delta']
+    freq_tgt, acc_tgt = config['tunning']['target']
+    freq_ori, acc_ori = peak
+    freq_dx1, acc_dx1 = peak_dx1
+    freq_dx2, acc_dx2 = peak_dx2
+
+    diff_11 = (freq_dx1 - freq_ori) / dx1
+    diff_12 = (freq_dx2 - freq_ori) / dx2
+    diff_21 = (acc_dx1 - acc_ori) / dx1
+    diff_22 = (acc_dx2 - acc_ori) / dx2
+    diff_mat = np.array([[diff_11, diff_12], [diff_21, diff_22]])
+
+    error_freq = freq_ori - freq_tgt
+    error_acc = acc_ori - acc_tgt
+    error_mat = np.array([error_freq, error_acc]).reshape((2, 1))
+
+    diff_mat_inv = np.linalg.inv(diff_mat)
+    params_new = np.array(params).reshape((2, 1)) - diff_mat_inv.dot(error_mat)
+    return params_new.flatten().tolist()
 
 
 def get_new_model_name(model_name_ori: str, itr: int):
@@ -143,16 +155,17 @@ def main():
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
     model_name = config['solve']['model_ini']
-    delta = config['tunning']['delta']
-    model_tmp = 'temp'
+    dx1, dx2 = config['tunning']['delta']
+    # model_tmp = 'temp'
 
-    # Parse initial *.fem 
+    # Parse initial *.fem
     lines, row_idx = tick_fem(config, model_name)
-    elastic, damping = retrieve_parameters(lines[row_idx])
+    params = retrieve_parameters(lines[row_idx])
 
     itr = 0
     while True:
         # Review current model
+        elastic, damping = params
         logger.info(f'Iteration: {itr:2d}')
         logger.info(f'Elastic: {elastic:8.5f}, Damping: {damping:8.5f}')
 
@@ -163,21 +176,20 @@ def main():
         itr += 1
 
         # Temp model
-        params_tmp = [elastic + delta[0], damping]
-        save_new_fem(config, lines, row_idx, params_tmp, model_tmp)
-        peak_tmp_1 = run_model(config, model_tmp, logger)
-        
-        params_tmp = [elastic, damping + delta[1]]
-        save_new_fem(config, lines, row_idx, params_tmp, model_tmp)
-        peak_tmp_2 = run_model(config, model_tmp, logger)
+        params_tmp = [elastic + dx1, damping]
+        save_new_fem(config, lines, row_idx, params_tmp, 'temp_1')
+        peak_dx1 = run_model(config, 'temp_1', logger)
 
+        params_tmp = [elastic, damping + dx2]
+        save_new_fem(config, lines, row_idx, params_tmp, 'temp_2')
+        peak_dx2 = run_model(config, 'temp_2', logger)
 
-        # # New model
-        # damping_new = find_new_damping(
-        #     config, damping, peak_acc, peak_acc_tmp, logger
-        # )
-        # model_name = get_new_model_name(model_name, itr)
-        # save_new_fem(config, lines, row_idx, damping_new, model_name)
+        # New model
+        params = find_new_params(
+            config, peak, peak_dx1, peak_dx2, params
+        )
+        model_name = get_new_model_name(model_name, itr)
+        save_new_fem(config, lines, row_idx, params, model_name)
     logger.info('Done.')
 
 
