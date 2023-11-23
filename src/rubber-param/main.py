@@ -25,9 +25,10 @@ def parse_fem(config: dict, model_name: str, logger: logging.Logger) -> dict:
             break
     row_idx += 2
     rubber_data = lines[row_idx]
+    elastic = float(rubber_data[16:24])
     damping = float(rubber_data[64:])
-    logger.info(f'current damping: {damping:8.5f}')
-    return lines, row_idx, damping
+    logger.info(f'current parameters: {elastic:8.5f}, {damping:8.5f}')
+    return lines, row_idx, (elastic, damping)
 
 
 def run_model(config: dict, model_name: str, logger: logging.Logger) -> list[float]:
@@ -144,23 +145,23 @@ def main():
     while True:
         # Current model
         logger.info(f'Iteration: {itr:2d}')
-        lines, row_idx, damping = parse_fem(config, model_name, logger)
+        lines, row_idx, params = parse_fem(config, model_name, logger)
         peak_freq, peak_acc = run_model(config, model_name, logger)
         if check_break_iteration(config, peak_acc, itr, logger):
             break
         itr += 1
 
-        # Temp model
-        damping_tmp = damping + damping_delta
-        save_new_fem(config, lines, row_idx, damping_tmp, model_tmp)
-        peak_freq_tmp, peak_acc_tmp = run_model(config, model_tmp, logger)
+        # # Temp model
+        # damping_tmp = damping + damping_delta
+        # save_new_fem(config, lines, row_idx, damping_tmp, model_tmp)
+        # peak_freq_tmp, peak_acc_tmp = run_model(config, model_tmp, logger)
 
-        # New model
-        damping_new = find_new_damping(
-            config, damping, peak_acc, peak_acc_tmp, logger
-        )
-        model_name = get_new_model_name(model_name, itr)
-        save_new_fem(config, lines, row_idx, damping_new, model_name)
+        # # New model
+        # damping_new = find_new_damping(
+        #     config, damping, peak_acc, peak_acc_tmp, logger
+        # )
+        # model_name = get_new_model_name(model_name, itr)
+        # save_new_fem(config, lines, row_idx, damping_new, model_name)
     logger.info('Done.')
 
 
