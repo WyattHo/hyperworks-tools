@@ -34,18 +34,26 @@ proc create_curves {page_idx window_idx h3d_path subcase_name nodes} {
 }
 
 
-proc export_csv {h3d_path} {
+proc export_csv {h3d_path page_idx window_idx} {
+    # Assign the path
     set len [string length $h3d_path]
     set model_name [string range $h3d_path 0 [expr $len - 5]]
     set suffix "subcase2"
     set csv_path "$model_name-$suffix.csv"
 
+    # Export
     hwi GetSessionHandle sess
     sess GetClientManagerHandle pm Plot
     pm GetExportCtrlHandle exp
     exp SetFormat "CSV Blocks"
     exp SetFilename $csv_path
     exp Export
+
+    # Release
+    hwc xy curve delete range="p:$page_idx w:$window_idx"
+    sess ReleaseHandle
+    pm ReleaseHandle
+    exp ReleaseHandle
 }
 
 
@@ -97,7 +105,7 @@ proc main {argv} {
     create_curves $page_idx $window_idx $h3d_path $subcase_name $nodes
 
     # Export and exit
-    export_csv $h3d_path
+    export_csv $h3d_path $page_idx $window_idx
     if {$exit} {
         hwc hwd exit
     }
