@@ -34,6 +34,12 @@ def retrieve_parameters(rubber_data: str) -> tuple[float, float]:
     return elastic, damping
 
 
+def review_current_model(itr: int, params: list[float], logger: logging.Logger):
+    elastic, damping = params
+    logger.info(f'Iteration: {itr:2d}')
+    logger.info(f'Elastic: {elastic:8.5f}, Damping: {damping:8.5f}')
+
+
 def run_model(config: dict, model_name: str, logger: logging.Logger) -> tuple[float, float]:
     run_solver(config, model_name, logger)
     postprocess_h3d(config, model_name, logger)
@@ -141,8 +147,8 @@ def find_new_params(config: dict, peak: tuple[float, float], peak_dx1: tuple[flo
 
 
 def get_new_model_name(model_name_ori: str, itr: int):
-    suffix = f'-itr{itr:03d}'
-    if itr == 1:
+    suffix = f'-itr{itr + 1:03d}'
+    if itr == 0:
         model_name_new = model_name_ori + suffix
     else:
         model_name_new = model_name_ori[0:-len(suffix)] + suffix
@@ -156,7 +162,7 @@ def main():
     logger = logging.getLogger()
     model_name = config['solve']['model_ini']
     dx1, dx2 = config['tunning']['delta']
-    # model_tmp = 'temp'
+    model_tmp = 'temp'
 
     # Parse initial *.fem
     lines, row_idx = tick_fem(config, model_name)
@@ -164,32 +170,27 @@ def main():
 
     itr = 0
     while True:
-        # Review current model
-        elastic, damping = params
-        logger.info(f'Iteration: {itr:2d}')
-        logger.info(f'Elastic: {elastic:8.5f}, Damping: {damping:8.5f}')
-
-        # Run current model
+        # Current model
+        review_current_model(itr, params, logger)
         peak = run_model(config, model_name, logger)
         if check_break_iteration(config, peak, itr, logger):
             break
-        itr += 1
 
         # Temp model
-        params_tmp = [elastic + dx1, damping]
-        save_new_fem(config, lines, row_idx, params_tmp, 'temp_1')
-        peak_dx1 = run_model(config, 'temp_1', logger)
+        params_tmp = [params[0] + dx1, params[1]]
+        save_new_fem(config, lines, row_idx, params_tmp, model_tmp)
+        peak_dx1 = run_model(config, model_tmp, logger)
 
-        params_tmp = [elastic, damping + dx2]
-        save_new_fem(config, lines, row_idx, params_tmp, 'temp_2')
-        peak_dx2 = run_model(config, 'temp_2', logger)
+        params_tmp = [params[0], params[1] + dx2]
+        save_new_fem(config, lines, row_idx, params_tmp, model_tmp)
+        peak_dx2 = run_model(config, model_tmp, logger)
 
         # New model
-        params = find_new_params(
-            config, peak, peak_dx1, peak_dx2, params
-        )
+        params = find_new_params(config, peak, peak_dx1, peak_dx2, params)
         model_name = get_new_model_name(model_name, itr)
         save_new_fem(config, lines, row_idx, params, model_name)
+        itr += 1
+
     logger.info('Done.')
 
 
