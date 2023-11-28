@@ -22,7 +22,23 @@ proc assign_data_y {range_curve h3d_path subcase_name node_label} {
 }
 
 
-proc create_curves {page_idx window_idx h3d_path subcase_name nodes} {
+proc get_subcase_name {subcase_idx} {
+    hwi OpenStack
+    hwi GetSessionHandle session_handle
+    session_handle GetProjectHandle project_handle
+    project_handle GetPageHandle page_handle [project_handle GetActivePage]
+    page_handle GetWindowHandle window_handle "1"
+    window_handle GetClientHandle client_handle
+    client_handle GetModelHandle model_handle "1"
+    model_handle GetResultCtrlHandle result_handle
+    set subcase_name [result_handle GetSubcaseLabel $subcase_idx]
+    hwi CloseStack
+    return $subcase_name
+}
+
+
+proc create_curves {page_idx window_idx h3d_path subcase_idx nodes} {
+    set subcase_name [get_subcase_name $subcase_idx]
     foreach node_idx $nodes {
         set node_label "N$node_idx"
         set line_idx [expr [lsearch $nodes $node_idx] + 1]
@@ -96,13 +112,13 @@ proc main {argv} {
     # Constants
     set page_idx "1"
     set window_idx "2"
-    set subcase_name "Subcase 2 (FRF_X)"
+    set subcase_idx "2"
 
     # Manipulate the page and windows
     hwc open animation modelandresult $h3d_path $h3d_path
     hwc hwd page current layout=1 activewindow=$window_idx
     hwc hwd window type="HyperGraph 2D"
-    create_curves $page_idx $window_idx $h3d_path $subcase_name $nodes
+    create_curves $page_idx $window_idx $h3d_path $subcase_idx $nodes
 
     # Export and exit
     export_csv $h3d_path $page_idx $window_idx
