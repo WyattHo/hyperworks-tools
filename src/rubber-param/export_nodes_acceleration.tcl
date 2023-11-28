@@ -49,12 +49,42 @@ proc export_csv {h3d_path} {
 }
 
 
+proc get_current_file_name {} {
+    # Get the current file name
+    hwi GetSessionHandle session_handle
+    session_handle GetProjectHandle project_handle
+    project_handle GetPageHandle page_handle [project_handle GetActivePage]
+    page_handle GetWindowHandle window_handle [page_handle GetActiveWindow]
+    window_handle GetClientHandle client_handle
+    client_handle GetModelHandle model_handle [client_handle GetActiveModel]
+    set file_name [model_handle GetFileName]
+
+    # release handles
+    session_handle ReleaseHandle
+    project_handle ReleaseHandle
+    page_handle ReleaseHandle
+    window_handle ReleaseHandle
+    client_handle ReleaseHandle
+    model_handle ReleaseHandle
+
+    # return
+    return $file_name
+}
+
+
 proc main {argv} {
     # Parse arguments
-    lassign [lrange $argv 3 end] arg_1 arg_2
-    set h3d_path [string map {\\ /} $arg_1]
-    set nodes [split $arg_2 ","]
-
+    if {[lindex $argv 1] == "-tcl"} {
+        lassign [lrange $argv 3 end] h3d_path nodes
+        set exit "true"
+    } else {
+        set h3d_path [get_current_file_name]
+        set nodes "2357428,2357684,2328963,2325886"
+        set exit "false"
+    }
+    set h3d_path [string map {\\ /} $h3d_path]
+    set nodes [split $nodes ","]
+    
     # Constants
     set page_idx "1"
     set window_idx "2"
@@ -68,7 +98,9 @@ proc main {argv} {
 
     # Export and exit
     export_csv $h3d_path
-    hwc hwd exit
+    if {$exit} {
+        hwc hwd exit
+    }
 }
 
 
