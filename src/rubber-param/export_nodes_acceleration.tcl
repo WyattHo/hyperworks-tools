@@ -1,9 +1,3 @@
-proc create_empty_curve {page_idx window_idx} {
-    set range_window "p:$page_idx w:$window_idx"
-    hwc xy curve create range=$range_window
-}
-
-
 proc assign_data_x {range_curve h3d_path subcase_name node_label} {
     hwc xy curve edit range=$range_curve xfile=$h3d_path
     hwc xy curve edit range=$range_curve xsubcase=$subcase_name
@@ -37,20 +31,20 @@ proc get_subcase_name {subcase_idx} {
 }
 
 
-proc create_curves {page_idx window_idx h3d_path subcase_idx nodes} {
+proc create_curves {range_window h3d_path subcase_idx nodes} {
     set subcase_name [get_subcase_name $subcase_idx]
     foreach node_idx $nodes {
         set node_label "N$node_idx"
         set line_idx [expr [lsearch $nodes $node_idx] + 1]
-        set range_curve "p:$page_idx w:$window_idx i:$line_idx"
-        create_empty_curve $page_idx $window_idx
+        set range_curve "$range_window i:$line_idx"
+        hwc xy curve create range=$range_window
         assign_data_x $range_curve $h3d_path $subcase_name $node_label
         assign_data_y $range_curve $h3d_path $subcase_name $node_label
     }
 }
 
 
-proc export_csv {h3d_path page_idx window_idx subcase_idx} {
+proc export_csv {h3d_path range_window subcase_idx} {
     # Assign the path
     set len [string length $h3d_path]
     set model_name [string range $h3d_path 0 [expr $len - 5]]
@@ -66,7 +60,7 @@ proc export_csv {h3d_path page_idx window_idx subcase_idx} {
     exp Export
 
     # Release
-    hwc xy curve delete range="p:$page_idx w:$window_idx"
+    hwc xy curve delete range=$range_window
     sess ReleaseHandle
     pm ReleaseHandle
     exp ReleaseHandle
@@ -113,16 +107,19 @@ proc main {argv} {
     # Constants
     set page_idx "1"
     set window_idx "2"
+    set range_window "p:$page_idx w:$window_idx"
     set subcase_idx "2"
+    # set result_type "Acceleration (Grids)"
+    # set result_comp "MAG | X"
 
     # Manipulate the page and windows
     hwc open animation modelandresult $h3d_path $h3d_path
     hwc hwd page current layout=1 activewindow=$window_idx
     hwc hwd window type="HyperGraph 2D"
-    create_curves $page_idx $window_idx $h3d_path $subcase_idx $nodes
+    create_curves $range_window $h3d_path $subcase_idx $nodes
 
     # Export and exit
-    export_csv $h3d_path $page_idx $window_idx $subcase_idx
+    export_csv $h3d_path $range_window $subcase_idx
     if {$exit} {
         hwc hwd exit
     }
