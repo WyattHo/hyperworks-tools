@@ -46,11 +46,11 @@ proc create_curves {range_window h3d_path subcase_idx nodes result_type} {
 }
 
 
-proc export_csv {h3d_path range_window subcase_idx} {
+proc export_csv {h3d_path range_window subcase_idx result_name} {
     # Assign the path
     set len [string length $h3d_path]
     set model_name [string range $h3d_path 0 [expr $len - 5]]
-    set suffix [format "subcase%02d" $subcase_idx]
+    set suffix [format "subcase%02d-%s" $subcase_idx $result_name]
     set csv_path "$model_name-$suffix.csv"
 
     # Export
@@ -112,6 +112,7 @@ proc main {argv} {
     set range_window "p:$page_idx w:$window_idx"
     set subcase_idx "3"
     set result_type {"Acceleration (Grids)" "MAG | Y"}
+    set result_name "accY"
 
     # Manipulate the page and windows
     hwc open animation modelandresult $h3d_path $h3d_path
@@ -120,7 +121,7 @@ proc main {argv} {
     create_curves $range_window $h3d_path $subcase_idx $nodes $result_type
 
     # Export and exit
-    export_csv $h3d_path $range_window $subcase_idx
+    export_csv $h3d_path $range_window $subcase_idx $result_name
     if {$exit} {
         hwc hwd exit
     }
