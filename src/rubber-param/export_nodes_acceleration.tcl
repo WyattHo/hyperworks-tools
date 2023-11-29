@@ -1,18 +1,20 @@
-proc assign_data_x {range_curve h3d_path subcase_name node_label} {
+proc assign_data_x {range_curve h3d_path subcase_name node_label result_type} {
+    lassign $result_type physic comp
     hwc xy curve edit range=$range_curve xfile=$h3d_path
     hwc xy curve edit range=$range_curve xsubcase=$subcase_name
-    hwc xy curve edit range=$range_curve xtype="Acceleration (Grids)"
+    hwc xy curve edit range=$range_curve xtype=$physic
     hwc xy curve edit range=$range_curve xrequest=$node_label
     hwc xy curve edit range=$range_curve xcomponent="Time"
 }
 
 
-proc assign_data_y {range_curve h3d_path subcase_name node_label} {
+proc assign_data_y {range_curve h3d_path subcase_name node_label result_type} {
+    lassign $result_type physic comp
     hwc xy curve edit range=$range_curve yfile=$h3d_path
     hwc xy curve edit range=$range_curve ysubcase=$subcase_name
-    hwc xy curve edit range=$range_curve ytype="Acceleration (Grids)"
+    hwc xy curve edit range=$range_curve ytype=$physic
     hwc xy curve edit range=$range_curve yrequest=$node_label
-    hwc xy curve edit range=$range_curve ycomponent="MAG | X"
+    hwc xy curve edit range=$range_curve ycomponent=$comp
 }
 
 
@@ -31,15 +33,15 @@ proc get_subcase_name {subcase_idx} {
 }
 
 
-proc create_curves {range_window h3d_path subcase_idx nodes} {
+proc create_curves {range_window h3d_path subcase_idx nodes result_type} {
     set subcase_name [get_subcase_name $subcase_idx]
     foreach node_idx $nodes {
         set node_label "N$node_idx"
         set line_idx [expr [lsearch $nodes $node_idx] + 1]
         set range_curve "$range_window i:$line_idx"
         hwc xy curve create range=$range_window
-        assign_data_x $range_curve $h3d_path $subcase_name $node_label
-        assign_data_y $range_curve $h3d_path $subcase_name $node_label
+        assign_data_x $range_curve $h3d_path $subcase_name $node_label $result_type
+        assign_data_y $range_curve $h3d_path $subcase_name $node_label $result_type
     }
 }
 
@@ -108,15 +110,14 @@ proc main {argv} {
     set page_idx "1"
     set window_idx "2"
     set range_window "p:$page_idx w:$window_idx"
-    set subcase_idx "2"
-    # set result_type "Acceleration (Grids)"
-    # set result_comp "MAG | X"
+    set subcase_idx "3"
+    set result_type {"Acceleration (Grids)" "MAG | Y"}
 
     # Manipulate the page and windows
     hwc open animation modelandresult $h3d_path $h3d_path
     hwc hwd page current layout=1 activewindow=$window_idx
     hwc hwd window type="HyperGraph 2D"
-    create_curves $range_window $h3d_path $subcase_idx $nodes
+    create_curves $range_window $h3d_path $subcase_idx $nodes $result_type
 
     # Export and exit
     export_csv $h3d_path $range_window $subcase_idx
