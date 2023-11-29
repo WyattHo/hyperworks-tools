@@ -13,6 +13,7 @@ proc assign_data_y {range_curve h3d_path subcase_name node_label result_type res
     hwc xy curve edit range=$range_curve ytype=$result_type
     hwc xy curve edit range=$range_curve yrequest=$node_label
     hwc xy curve edit range=$range_curve ycomponent=$result_comp
+    hwc xy curve edit range=$range_curve label=$node_label
 }
 
 
