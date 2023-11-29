@@ -20,7 +20,7 @@ proc get_subcase_name {subcase_idx} {
     hwi OpenStack
     hwi GetSessionHandle session_handle
     session_handle GetProjectHandle project_handle
-    project_handle GetPageHandle page_handle [project_handle GetActivePage]
+    project_handle GetPageHandle page_handle "1"
     page_handle GetWindowHandle window_handle "1"
     window_handle GetClientHandle client_handle
     client_handle GetModelHandle model_handle "1"
@@ -48,8 +48,6 @@ proc export_csv {h3d_path range_window subcase_idx result_name} {
     # Assign the path
     set len [string length $h3d_path]
     set model_name [string range $h3d_path 0 [expr $len - 5]]
-    puts $subcase_idx
-    puts $result_name
     set suffix [format "subcase%02d-%s" $subcase_idx $result_name]
     set csv_path "$model_name-$suffix.csv"
 
@@ -70,10 +68,10 @@ proc get_current_file_name {} {
     hwi OpenStack
     hwi GetSessionHandle session_handle
     session_handle GetProjectHandle project_handle
-    project_handle GetPageHandle page_handle [project_handle GetActivePage]
-    page_handle GetWindowHandle window_handle [page_handle GetActiveWindow]
+    project_handle GetPageHandle page_handle "1"
+    page_handle GetWindowHandle window_handle "1"
     window_handle GetClientHandle client_handle
-    client_handle GetModelHandle model_handle [client_handle GetActiveModel]
+    client_handle GetModelHandle model_handle "1"
     set file_name [model_handle GetFileName]
     hwi CloseStack
     return $file_name
@@ -90,6 +88,7 @@ proc main {argv} {
         set result_names [split $result_names ","]
         set exit "true"
     } else {
+        hwc hwd page current activewindow=1
         set h3d_path [get_current_file_name]
         # set nodes "2357428,2357684,2328963,2325886";  # 8 modules
         set nodes "2326131,2325886,2357683,2357432";  # 7 modules
@@ -105,6 +104,7 @@ proc main {argv} {
     set window_idx "2"
     set range_window "p:$page_idx w:$window_idx"
 
+    # Start process
     for {set i 0} {$i < [llength $subcase_indices]} {incr i} {
         set subcase_idx [lindex $subcase_indices $i]
         set result_type [lindex $result_types $i]
