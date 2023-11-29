@@ -93,7 +93,7 @@ proc get_current_file_name {} {
 
 
 proc main {argv} {
-    # Parse arguments
+    # Configuratons
     if {[lindex $argv 1] == "-tcl"} {
         lassign [lrange $argv 3 end] h3d_path nodes
         set exit "true"
@@ -105,23 +105,28 @@ proc main {argv} {
     }
     set h3d_path [string map {\\ /} $h3d_path]
     set nodes [split $nodes ","]
-    
-    # Constants
     set page_idx "1"
     set window_idx "2"
     set range_window "p:$page_idx w:$window_idx"
-    set subcase_idx "3"
-    set result_type {"Acceleration (Grids)" "MAG | Y"}
-    set result_name "accY"
+    set subcase_indices "2 3 4"
+    set result_types {{"Acceleration (Grids)" "MAG | X"} {"Acceleration (Grids)" "MAG | Y"} {"Acceleration (Grids)" "MAG | Z"}}
+    set result_names "accX accY accZ"
 
-    # Manipulate the page and windows
-    hwc open animation modelandresult $h3d_path $h3d_path
-    hwc hwd page current layout=1 activewindow=$window_idx
-    hwc hwd window type="HyperGraph 2D"
-    create_curves $range_window $h3d_path $subcase_idx $nodes $result_type
+    for {set i 0} {$i < [llength $subcase_indices]} {incr i} {
+        set subcase_idx [lindex $subcase_indices $i]
+        set result_type [lindex $result_types $i]
+        set result_name [lindex $result_names $i]
+        
+        # Manipulate the page and windows
+        hwc open animation modelandresult $h3d_path $h3d_path
+        hwc hwd page current layout=1 activewindow=$window_idx
+        hwc hwd window type="HyperGraph 2D"
+        create_curves $range_window $h3d_path $subcase_idx $nodes $result_type
 
-    # Export and exit
-    export_csv $h3d_path $range_window $subcase_idx $result_name
+        # Export and exit
+        export_csv $h3d_path $range_window $subcase_idx $result_name
+    }
+
     if {$exit} {
         hwc hwd exit
     }
