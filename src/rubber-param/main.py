@@ -62,18 +62,25 @@ def postprocess_h3d(config: dict, model_name: str, logger: logging.Logger) -> su
     h3d_name = model_name + '.h3d'
     tcl_name = config['export']['tcl_name']
     nodes = ','.join([f'{idx}' for idx in config['export']['nodes']])
+    subcase_indices = ','.join([f'{idx}' for idx in config['export']['subcase_indices']])
+    result_types = ','.join([f'{idx}' for idx in config['export']['result_types']])
+    result_components = '\",\"'.join([f'{idx}' for idx in config['export']['result_components']])
+    result_names = ','.join([f'{idx}' for idx in config['export']['result_names']])
 
     h3d_path = Path(cwd).joinpath(h3d_name)
     tcl_path = Path(__file__).parent.joinpath(tcl_name)
 
-    cmd = f'hw -tcl {tcl_path} {h3d_path} {nodes}'
+    cmd = f'hw -tcl {tcl_path} {h3d_path} {nodes} {subcase_indices} \"{result_types}\" \"{result_components}\" {result_names}'
     logger.info(f'Executing: {tcl_path}')
     return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
 
 def read_csv_data(config: dict, model_name: str) -> tuple[float, float]:
     cwd = config['cwd']
-    csv_name = model_name + '-subcase2.csv'  # hard code QQ
+    subcase_idx = config['tunning']['peak']['subcase_idx']
+    result_name = config['tunning']['peak']['result_name']
+
+    csv_name = model_name + f'-subcase{subcase_idx:02d}-{result_name}.csv'
     GRAV = 9806.65
     csv_path = Path(cwd).joinpath(csv_name)
     df = pd.read_csv(csv_path)
