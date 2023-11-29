@@ -50,11 +50,11 @@ proc create_curves {page_idx window_idx h3d_path subcase_idx nodes} {
 }
 
 
-proc export_csv {h3d_path page_idx window_idx} {
+proc export_csv {h3d_path page_idx window_idx subcase_idx} {
     # Assign the path
     set len [string length $h3d_path]
     set model_name [string range $h3d_path 0 [expr $len - 5]]
-    set suffix "subcase2"
+    set suffix [format "subcase%02d" $subcase_idx]
     set csv_path "$model_name-$suffix.csv"
 
     # Export
@@ -103,7 +103,8 @@ proc main {argv} {
         set exit "true"
     } else {
         set h3d_path [get_current_file_name]
-        set nodes "2357428,2357684,2328963,2325886"
+        # set nodes "2357428,2357684,2328963,2325886";  # 8 modules
+        set nodes "2326131,2325886,2357683,2357432";  # 7 modules
         set exit "false"
     }
     set h3d_path [string map {\\ /} $h3d_path]
@@ -121,7 +122,7 @@ proc main {argv} {
     create_curves $page_idx $window_idx $h3d_path $subcase_idx $nodes
 
     # Export and exit
-    export_csv $h3d_path $page_idx $window_idx
+    export_csv $h3d_path $page_idx $window_idx $subcase_idx
     if {$exit} {
         hwc hwd exit
     }
