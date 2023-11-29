@@ -54,23 +54,20 @@ proc export_csv {h3d_path range_window subcase_idx result_name} {
     set csv_path "$model_name-$suffix.csv"
 
     # Export
+    hwi OpenStack
     hwi GetSessionHandle sess
     sess GetClientManagerHandle pm Plot
     pm GetExportCtrlHandle exp
     exp SetFormat "CSV Blocks"
     exp SetFilename $csv_path
     exp Export
-
-    # Release
+    hwi CloseStack
     hwc xy curve delete range=$range_window
-    sess ReleaseHandle
-    pm ReleaseHandle
-    exp ReleaseHandle
 }
 
 
 proc get_current_file_name {} {
-    # Get the current file name
+    hwi OpenStack
     hwi GetSessionHandle session_handle
     session_handle GetProjectHandle project_handle
     project_handle GetPageHandle page_handle [project_handle GetActivePage]
@@ -78,16 +75,7 @@ proc get_current_file_name {} {
     window_handle GetClientHandle client_handle
     client_handle GetModelHandle model_handle [client_handle GetActiveModel]
     set file_name [model_handle GetFileName]
-
-    # release handles
-    session_handle ReleaseHandle
-    project_handle ReleaseHandle
-    page_handle ReleaseHandle
-    window_handle ReleaseHandle
-    client_handle ReleaseHandle
-    model_handle ReleaseHandle
-
-    # return
+    hwi CloseStack
     return $file_name
 }
 
