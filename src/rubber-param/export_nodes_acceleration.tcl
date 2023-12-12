@@ -91,8 +91,8 @@ proc main {argv} {
     } else {
         hwc hwd page current activewindow=1
         set h3d_path [get_current_file_name]
-        # set nodes "2357428,2357684,2328963,2325886";  # 8 modules
-        set nodes "2325886,2326131,2357432,2357683";  # 7 modules
+        set nodes "2357428,2357684,2328963,2325886";  # 8 modules
+        # set nodes "2325886,2326131,2357432,2357683";  # 7 modules
         set subcase_indices "2 3 4"
         set result_types {"Acceleration (Grids)"  "Acceleration (Grids)" "Acceleration (Grids)"}
         set result_components {"MAG | X" "MAG | Y" "MAG | Z"}

@@ -15,22 +15,40 @@ def read_configuration(config_name: str) -> dict:
     return config
 
 
-def tick_fem(config: dict, model_name: str) -> tuple[list[str], int]:
+def read_fem(config: dict, model_name: str) -> list[str]:
     cwd = config['cwd']
-    rubber_name = config['tunning']['rubber_name']
     fem = model_name + '.fem'
     with open(Path(cwd).joinpath(fem), 'r') as f:
         lines = f.readlines()
+    return lines
+
+
+def tick_fem(config: dict, lines: list[str]) -> int:
+    prefix = config['parser']['prefix']
+    rubber_name = config['parser']['rubber_name']
     for row_idx, line in enumerate(lines):
-        if line.startswith('$HMNAME MAT') and rubber_name in line:
+        if line.startswith(prefix) and rubber_name in line:
             break
-    row_idx += 2
-    return lines, row_idx
+    return row_idx
 
 
-def retrieve_parameters(rubber_data: str) -> tuple[float, float]:
-    elastic = float(rubber_data[16:24])
-    damping = float(rubber_data[64:])
+def retrieve_parameters(config: dict, lines: list[str], row_idx: int) -> tuple[float, float]:
+    line_inc_elastic = config['parser']['line_increment']['elastic']
+    line_inc_damping = config['parser']['line_increment']['damping']
+    field_len = config['parser']['field_length']
+    field_idx_elastic = config['parser']['field_idx']['elastic']
+    field_idx_damping = config['parser']['field_idx']['damping']
+
+    line_elastic = lines[row_idx + line_inc_elastic]
+    line_damping = lines[row_idx + line_inc_damping]
+
+    str_elastic = field_len * field_idx_elastic - field_len
+    end_elastic = field_len * field_idx_elastic
+    str_damping = field_len * field_idx_damping - field_len
+    end_damping = field_len * field_idx_damping
+
+    elastic = float(line_elastic[str_elastic:end_elastic])
+    damping = float(line_damping[str_damping:end_damping])
     return elastic, damping
 
 
@@ -117,15 +135,35 @@ def check_tolerance(config: dict, peak: tuple[float, float], logger: logging.Log
         return False
 
 
+def replace_field_value(line_ori: str, field_idx: int, field_len: int, value: float):
+    tick_str = field_len * field_idx - field_len
+    tick_end = field_len * field_idx
+    return line_ori[:tick_str] + f'{value:<8.5f}' + line_ori[tick_end:]
+
+
 def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, params: list[float], model_name: str):
     cwd = config['cwd']
+    line_inc_elastic = config['parser']['line_increment']['elastic']
+    line_inc_damping = config['parser']['line_increment']['damping']
+    field_len = config['parser']['field_length']
+    field_idx_elastic = config['parser']['field_idx']['elastic']
+    field_idx_damping = config['parser']['field_idx']['damping']
     elastic, damping = params
-    rubber_data_new = lines_ori[row_idx][0:16] \
-        + f'{elastic:<8.5f}' \
-        + lines_ori[row_idx][24:64] \
-        + f'{damping:<8.5f}\n'
+
+    line_elastic = lines_ori[row_idx + line_inc_elastic]
+    line_damping = lines_ori[row_idx + line_inc_damping]
+
     lines_new = lines_ori.copy()
-    lines_new[row_idx] = rubber_data_new
+    if line_inc_elastic == line_inc_damping:
+        line_elastic = replace_field_value(line_elastic, field_idx_elastic, field_len, elastic)
+        line_damping = replace_field_value(line_elastic, field_idx_damping, field_len, damping)
+        lines_new[row_idx + line_inc_damping] = line_damping
+    else:
+        line_elastic = replace_field_value(line_elastic, field_idx_elastic, field_len, elastic)
+        line_damping = replace_field_value(line_damping, field_idx_damping, field_len, damping)
+        lines_new[row_idx + line_inc_elastic] = line_elastic
+        lines_new[row_idx + line_inc_damping] = line_damping
+
     fem_path = Path(cwd).joinpath(f'{model_name}.fem')
     with open(fem_path, 'w') as f:
         f.writelines(lines_new)
@@ -169,11 +207,11 @@ def main():
     logger = logging.getLogger()
     model_name = config['solve']['model_ini']
     dx1, dx2 = config['tunning']['delta']
-    model_tmp = 'temp'
 
     # Parse initial *.fem
-    lines, row_idx = tick_fem(config, model_name)
-    params = retrieve_parameters(lines[row_idx])
+    lines = read_fem(config, model_name)
+    row_idx = tick_fem(config, lines)
+    params = retrieve_parameters(config, lines, row_idx)
 
     itr = 0
     while True:
@@ -185,12 +223,12 @@ def main():
 
         # Temp model
         params_tmp = [params[0] + dx1, params[1]]
-        save_new_fem(config, lines, row_idx, params_tmp, model_tmp)
-        peak_dx1 = run_model(config, model_tmp, logger)
+        save_new_fem(config, lines, row_idx, params_tmp, 'temp-1')
+        peak_dx1 = run_model(config, 'temp-1', logger)
 
         params_tmp = [params[0], params[1] + dx2]
-        save_new_fem(config, lines, row_idx, params_tmp, model_tmp)
-        peak_dx2 = run_model(config, model_tmp, logger)
+        save_new_fem(config, lines, row_idx, params_tmp, 'temp-2')
+        peak_dx2 = run_model(config, 'temp-2', logger)
 
         # New model
         params = find_new_params(config, peak, peak_dx1, peak_dx2, params)
