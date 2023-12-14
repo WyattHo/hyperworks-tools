@@ -2,13 +2,13 @@
     "cwd": "D:\\my-analysis\\kubota-package-8-module\\test",
     "solve": {
         "solver": "optistruct",
-        "model_ini": "kbt-fully-customized-8-module-bush",
+        "model_ini": "kbt-fully-customized-8-module-bush-radial",
         "nt": 16,
         "core": "in"
     },
     "parser":{
         "prefix": "$HMNAME PROP",
-        "rubber_name": "bush-axial",
+        "rubber_name": "bush-radial",
         "line_increment": {
             "elastic": 2,
             "damping": 3
@@ -22,7 +22,7 @@
     "export":{
         "tcl_name": "export_nodes_acceleration.tcl",
         "nodes": [2357428, 2357684, 2328963, 2325886],
-        "subcase_indices": [2, 3, 4],
+        "subcase_indices": [2, 3, 5],
         "result_types": [
             "Acceleration (Grids)",
             "Acceleration (Grids)",
@@ -36,14 +36,14 @@
         "result_names": ["accX", "accY", "accZ"]
     },
     "tunning": {
-        "target": [24.0793, 1.62147],
+        "target": [48.8714, 8.2362],
         "peak": {
-            "subcase_idx": 4,
-            "result_name": "accZ"
+            "subcase_idx": 2,
+            "result_name": "accX"
         },
         "tolerance_percentage": 0.05,
         "iteration_limit": 20,
-        "delta": [0.1, 0.01]
+        "delta": [1.0, 0.003]
     },
     "logging": {
         "version": 1,
@@ -65,7 +65,7 @@
                 "class": "logging.FileHandler",
                 "level": "DEBUG",
                 "formatter": "standard",
-                "filename": "info.log",
+                "filename": "info-radial.log",
                 "mode": "w"
             }
         },

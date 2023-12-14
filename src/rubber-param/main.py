@@ -128,6 +128,8 @@ def check_tolerance(config: dict, peak: tuple[float, float], logger: logging.Log
     target = config['tunning']['target']
     tolerance = config['tunning']['tolerance_percentage']
     error = sum([abs((p-t)/t) for p, t in zip(peak, target)]) / 2 * 100
+    logger.info(f'Actual peak responses: {target[0]:.3f}, {target[1]:.3f}')
+    logger.info(f'Simulated peak responses: {peak[0]:.3f}, {peak[1]:.3f}')
     logger.info(f'Error: {error:.3f}%')
     if error < tolerance:
         return True
@@ -172,26 +174,33 @@ def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, params: list[
         f.writelines(lines_new)
 
 
-def find_new_params(config: dict, peak: tuple[float, float], peak_dx1: tuple[float, float], peak_dx2: tuple[float, float], params: tuple[float, float]) -> list[float]:
+def find_new_params(config: dict, peak: tuple[float, float], peak_dx1: tuple[float, float], peak_dx2: tuple[float, float], params: tuple[float, float], logger: logging.Logger) -> list[float]:
     dx1, dx2 = config['tunning']['delta']
     freq_tgt, acc_tgt = config['tunning']['target']
     freq_ori, acc_ori = peak
     freq_dx1, acc_dx1 = peak_dx1
     freq_dx2, acc_dx2 = peak_dx2
 
-    diff_11 = (freq_dx1 - freq_ori) / dx1
-    diff_12 = (freq_dx2 - freq_ori) / dx2
-    diff_21 = (acc_dx1 - acc_ori) / dx1
-    diff_22 = (acc_dx2 - acc_ori) / dx2
-    diff_mat = np.array([[diff_11, diff_12], [diff_21, diff_22]])
+    diff_freq_dx1 = freq_dx1 - freq_ori
+    diff_acc_dx1 = acc_dx1 - acc_ori
+    diff_freq_dx2 = freq_dx2 - freq_ori
+    diff_acc_dx2 = acc_dx2 - acc_ori
+
+    slope_11 = diff_freq_dx1 / dx1
+    slope_12 = diff_freq_dx2 / dx2
+    slope_21 = diff_acc_dx1 / dx1
+    slope_22 = diff_acc_dx2 / dx2
+    slope_mat = np.array([[slope_11, slope_12], [slope_21, slope_22]])
 
     error_freq = freq_ori - freq_tgt
     error_acc = acc_ori - acc_tgt
     error_mat = np.array([error_freq, error_acc]).reshape((2, 1))
 
-    diff_mat_inv = np.linalg.inv(diff_mat)
-    params_new = np.array(params).reshape((2, 1)) - diff_mat_inv.dot(error_mat)
-    return [p if p > 0 else 0 for p in params_new.flatten().tolist()]
+    increment = (-np.linalg.inv(slope_mat).dot(error_mat)).flatten().tolist()
+    logger.info(f'd_elastic: {dx1:<8.5f}, d_freq: {diff_freq_dx1:<+10.2E}, d_acc: {diff_acc_dx1:<+10.2E}')
+    logger.info(f'd_damping: {dx2:<8.5f}, d_freq: {diff_freq_dx2:<+10.2E}, d_acc: {diff_acc_dx2:<+10.2E}')
+    logger.info(f'inc_elastic: {increment[0]:<8.5f}, inc_damping: {increment[1]:<+10.2E}')
+    return [p + i if p + i > 0 else 0 for p, i in zip(params, increment)]
 
 
 def get_new_model_name(model_name_ori: str, itr: int):
@@ -234,7 +243,7 @@ def main():
         peak_dx2 = run_model(config, 'temp-2', logger)
 
         # New model
-        params = find_new_params(config, peak, peak_dx1, peak_dx2, params)
+        params = find_new_params(config, peak, peak_dx1, peak_dx2, params, logger)
         model_name = get_new_model_name(model_name, itr)
         save_new_fem(config, lines, row_idx, params, model_name)
         itr += 1
