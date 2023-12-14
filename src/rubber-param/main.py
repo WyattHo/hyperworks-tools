@@ -138,7 +138,10 @@ def check_tolerance(config: dict, peak: tuple[float, float], logger: logging.Log
 def replace_field_value(line_ori: str, field_idx: int, field_len: int, value: float):
     tick_str = field_len * field_idx - field_len
     tick_end = field_len * field_idx
-    return line_ori[:tick_str] + f'{value:<8.5f}' + line_ori[tick_end:]
+    value_string = f'{value:<8.5f}'
+    if len(value_string) > 8:
+        value_string = value_string[:8]
+    return line_ori[:tick_str] + value_string + line_ori[tick_end:]
 
 
 def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, params: list[float], model_name: str):
@@ -157,12 +160,12 @@ def save_new_fem(config: dict, lines_ori: list[str], row_idx: int, params: list[
     if line_inc_elastic == line_inc_damping:
         line_elastic = replace_field_value(line_elastic, field_idx_elastic, field_len, elastic)
         line_damping = replace_field_value(line_elastic, field_idx_damping, field_len, damping)
-        lines_new[row_idx + line_inc_damping] = line_damping
+        lines_new[row_idx + line_inc_damping] = line_damping + '\n'
     else:
         line_elastic = replace_field_value(line_elastic, field_idx_elastic, field_len, elastic)
         line_damping = replace_field_value(line_damping, field_idx_damping, field_len, damping)
         lines_new[row_idx + line_inc_elastic] = line_elastic
-        lines_new[row_idx + line_inc_damping] = line_damping
+        lines_new[row_idx + line_inc_damping] = line_damping + '\n'
 
     fem_path = Path(cwd).joinpath(f'{model_name}.fem')
     with open(fem_path, 'w') as f:
@@ -188,7 +191,7 @@ def find_new_params(config: dict, peak: tuple[float, float], peak_dx1: tuple[flo
 
     diff_mat_inv = np.linalg.inv(diff_mat)
     params_new = np.array(params).reshape((2, 1)) - diff_mat_inv.dot(error_mat)
-    return params_new.flatten().tolist()
+    return [p if p > 0 else 0 for p in params_new.flatten().tolist()]
 
 
 def get_new_model_name(model_name_ori: str, itr: int):

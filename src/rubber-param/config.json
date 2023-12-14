@@ -2,20 +2,20 @@
     "cwd": "D:\\my-analysis\\kubota-package-8-module\\test",
     "solve": {
         "solver": "optistruct",
-        "model_ini": "kbt-fully-customized-8-module-un383",
+        "model_ini": "kbt-fully-customized-8-module-bush",
         "nt": 16,
         "core": "in"
     },
     "parser":{
-        "prefix": "$HMNAME MAT",
-        "rubber_name": "Rubber",
+        "prefix": "$HMNAME PROP",
+        "rubber_name": "bush-axial",
         "line_increment": {
             "elastic": 2,
-            "damping": 2
+            "damping": 3
         },
         "field_idx": {
-            "elastic": 3,
-            "damping": 9
+            "elastic": 4,
+            "damping": 4
         },
         "field_length": 8
     },
@@ -36,14 +36,14 @@
         "result_names": ["accX", "accY", "accZ"]
     },
     "tunning": {
-        "target": [48.8714, 8.2362],
+        "target": [24.0793, 1.62147],
         "peak": {
-            "subcase_idx": 2,
-            "result_name": "accX"
+            "subcase_idx": 4,
+            "result_name": "accZ"
         },
         "tolerance_percentage": 0.05,
         "iteration_limit": 20,
-        "delta": [0.01, 0.0001]
+        "delta": [0.1, 0.01]
     },
     "logging": {
         "version": 1,
